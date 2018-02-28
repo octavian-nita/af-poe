@@ -1,4 +1,4 @@
-# [af-ledger: AppFold Personal Ledger](https://ledger.appfold.net)
+# [af-poe: AppFold PersOnal Expense journal / spending log](https://poe.appfold.net)
 
 ## Next Milestone
 
