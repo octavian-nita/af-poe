@@ -1,1 +1,0 @@
-DROP DATABASE af_poe;
