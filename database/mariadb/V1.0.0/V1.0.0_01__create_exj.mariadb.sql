@@ -2,7 +2,7 @@ USE af_poe;
 
 -- Entries in a simple expense journal.
 --
-CREATE TABLE t_poe_entry (
+CREATE TABLE t_exj_entry (
 
   id          INTEGER UNSIGNED        NOT NULL UNIQUE AUTO_INCREMENT            COMMENT 'The entry technical identifier',
   posted_on   DATETIME                NOT NULL        DEFAULT CURRENT_TIMESTAMP COMMENT 'The date (and time) the entry has been posted on; may be different from the actual transaction date, usually soon after',
@@ -16,7 +16,7 @@ CREATE TABLE t_poe_entry (
 
 -- Categories for the expense journal entries.
 --
-CREATE TABLE t_poe_category (
+CREATE TABLE t_exj_category (
 
   id          VARCHAR(255)  NOT NULL UNIQUE COMMENT 'A category code for an entry, e.g. OTHER, GROC for groceries, etc. useful for reporting, grouping, insights, etc.; also a technical identifier',
   description VARCHAR(1000)                 COMMENT 'Optional description / details for the category',
@@ -26,12 +26,12 @@ CREATE TABLE t_poe_category (
 
 -- Associates expense journal entries with categories (many-to-many).
 --
-CREATE TABLE t_poe_entry_category (
+CREATE TABLE t_exj_entry_category (
 
   entry_id    INTEGER UNSIGNED NOT NULL UNIQUE,
   category_id VARCHAR(255)     NOT NULL UNIQUE,
 
-  FOREIGN KEY (entry_id)    REFERENCES t_poe_entry (id),
-  FOREIGN KEY (category_id) REFERENCES t_poe_category (id),
+  FOREIGN KEY (entry_id)    REFERENCES t_exj_entry (id),
+  FOREIGN KEY (category_id) REFERENCES t_exj_category (id),
   PRIMARY KEY (entry_id, category_id)
 );
