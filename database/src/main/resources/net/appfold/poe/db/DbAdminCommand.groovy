@@ -1,17 +1,17 @@
 package net.appfold.poe.db
 
+import groovy.sql.Sql
+
 abstract class DbAdminCommand {
-
-    protected abstract String getDescription()
-
-    protected abstract String getDriver()
 
     protected abstract String getUrl()
 
-    protected getUsernameAndPassword() {
-        def final console = System.console()
+    protected abstract String getDriver()
 
-        def username = System.getProperty('poe.username')
+    protected def getUsernameAndPassword() {
+        final def console = System.console()
+
+        def username = System.getProperty('db.admin.username')
         if (username == null && console != null) {
             username = console.readLine('Admin username (<ENTER> for root): ')
             if (username.length() == 0) {
@@ -19,7 +19,7 @@ abstract class DbAdminCommand {
             }
         }
 
-        def password = System.getProperty('poe.password')
+        def password = System.getProperty('db.admin.password')
         if (password == null && console != null) {
             password = console.readPassword('Admin password: ')
         } else {
@@ -29,17 +29,18 @@ abstract class DbAdminCommand {
         [username, password]
     }
 
+    protected abstract def execute(sql)
+
+    protected DbAdminCommand(description = 'Database admin command...') { this.description = description }
+
+    final def description
+
     def execute() {
-        printf "%n${this.description}%n%n"
+        printf "%n${description}%n%n"
 
         final def (String username, char[] password) = getUsernameAndPassword()
-        println ''
-        //Sql.withInstance(this.url, username, new String(password), this.driver, this.&execute)
-        println "Username: ${username}"
-        println "Password: ${password}"
+        Sql.withInstance(this.url, username, new String(password), this.driver, this.&execute)
 
         printf '%nDone.%n%n'
     }
-
-    protected abstract execute(sql)
 }
