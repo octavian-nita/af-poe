@@ -1,6 +1,5 @@
-USE af_poe;
-
--- Entries in a simple expense journal.
+--
+-- Entries in a simple EXpense Journal.
 --
 CREATE TABLE t_exj_entry (
 
@@ -14,6 +13,7 @@ CREATE TABLE t_exj_entry (
   PRIMARY KEY (id)
 ) AUTO_INCREMENT = 1;
 
+--
 -- Categories for the expense journal entries.
 --
 CREATE TABLE t_exj_category (
@@ -24,6 +24,7 @@ CREATE TABLE t_exj_category (
   PRIMARY KEY (id)
 );
 
+--
 -- Associates expense journal entries with categories (many-to-many).
 --
 CREATE TABLE t_exj_entry_category (

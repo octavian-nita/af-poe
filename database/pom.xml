@@ -7,7 +7,11 @@
   <groupId>net.appfold</groupId>
   <artifactId>poe-database</artifactId>
   <version>1.0.0-SNAPSHOT</version>
-  <packaging>jar</packaging>
+  <packaging>pom</packaging>
+  <!-- Why pom packaging -->
+  <!-- https://stackoverflow.com/a/25545817/272939 -->
+  <!-- https://stackoverflow.com/questions/7837778/maven-best-practice-for-creating-ad-hoc-zip-artifact -->
+  <!-- http://maven.apache.org/ref/3.3.3/maven-core/default-bindings.html#Plugin_bindings_for_pom_packaging -->
 
   <name>poe-database</name>
   <url>https://github.com/octavian-nita/af-poe/tree/master/database</url>
@@ -40,15 +44,101 @@
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+    <!-- DB properties -->
+    <!-- TODO split in generic and db-specific and externalize to environment-specific properties files -->
+    <db.host>localhost</db.host>
+    <db.port>3306</db.port>
+    <db.name>af_poe</db.name>
+    <db.username>af_poe</db.username>
+    <db.password>YourPasswordIsIncorrect:!)</db.password>
+
     <db.dialect>mariadb</db.dialect>
+    <db.jdbc.url>jdbc:${db.dialect}://${db.host}:${db.port}/${db.name}</db.jdbc.url>
+    <db.jdbc.driver>org.mariadb.jdbc.Driver</db.jdbc.driver>
   </properties>
 
   <build>
+    <defaultGoal>flyway:migrate</defaultGoal>
     <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-resources-plugin</artifactId>
+        <version>3.0.2</version>
+        <executions>
+          <execution>
+            <id>process-sql-scripts-on-clean</id>
+            <phase>clean</phase>
+            <goals>
+              <goal>resources</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>process-sql-scripts-on-install</id>
+            <phase>install</phase>
+            <goals>
+              <goal>resources</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <outputDirectory>${basedir}/target/classes</outputDirectory>
+          <resources>
+            <resource>
+              <directory>src/main/resources</directory>
+              <includes>
+                <include>**/*.sql</include>
+              </includes>
+              <filtering>true</filtering>
+            </resource>
+          </resources>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.gmavenplus</groupId>
+        <artifactId>gmavenplus-plugin</artifactId>
+        <version>1.6</version>
+        <executions>
+          <execution>
+            <id>dbctl-create</id>
+            <phase>install</phase>
+            <goals>
+              <goal>execute</goal>
+            </goals>
+            <configuration>
+              <properties>
+                <ctlCommand>create</ctlCommand>
+              </properties>
+            </configuration>
+          </execution>
+          <execution>
+            <id>dbctl-drop</id>
+            <phase>clean</phase>
+            <goals>
+              <goal>execute</goal>
+            </goals>
+            <configuration>
+              <properties>
+                <ctlCommand>drop</ctlCommand>
+              </properties>
+            </configuration>
+          </execution>
+        </executions>
+        <configuration>
+          <scripts>
+            <script>file:///${project.basedir}/src/main/resources/net/appfold/poe/db/dbctl.groovy</script>
+          </scripts>
+        </configuration>
+      </plugin>
     </plugins>
   </build>
 
   <dependencies>
+    <dependency>
+      <groupId>org.codehaus.groovy</groupId>
+      <artifactId>groovy-all</artifactId>
+      <version>2.4.14</version>
+    </dependency>
     <dependency>
       <groupId>org.flywaydb</groupId>
       <artifactId>flyway-core</artifactId>
