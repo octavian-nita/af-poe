@@ -1,23 +1,52 @@
 package net.appfold.poe.db
 
-ctlCommand = ctlCommand == null ? '' : String.valueOf(ctlCommand).trim().toLowerCase()
-switch (ctlCommand) {
+switch (cmd = input('cmd')) {
+
     case 'migrate':
     case 'create':
     case 'drop':
-        "$ctlCommand"()
+        "$cmd"()
         break
+
     case '':
         migrate()
         break
+
     default:
-        throw new RuntimeException("Database control command '${ctlCommand}' not supported!")
+        throw new RuntimeException("Database control command '${cmd}' not supported!")
 }
 
 def migrate() { println 'migrate...' }
 
 def create() { println 'create...' }
 
-def drop() { println 'drop...' }
+def drop() {
+    def confirm = input('confirm')
+    def final yes = ['y', 'yes', 'true']
 
-def propertyMissing(String name) { getClass().superclass.metaClass."$name" = System.getProperty(name) }
+    if (!(confirm in yes)) {
+        println ''
+        println '!! WARNING !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
+        println '!!                                                          !!'
+        println '!! Serious data loss might occur when dropping the database !!'
+        println '!!                                                          !!'
+        println '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
+        println ''
+
+        def console = System.console()
+        if (console) {
+            confirm = console.readLine('Drop the database [y/N]: ').trim().toLowerCase()
+        }
+    }
+
+    if (!(confirm in yes)) {
+        println "Use -Dconfirm=[${yes.join('|')}] to confirm database dropping"
+        return 1
+    }
+
+    println 'Dropping database...'
+}
+
+def private input(String name) {
+    ((binding.variables[name] ?: System.properties[name] ?: '') as String).trim().toLowerCase()
+}
