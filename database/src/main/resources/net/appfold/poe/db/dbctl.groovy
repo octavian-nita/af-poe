@@ -1,6 +1,6 @@
 package net.appfold.poe.db
 
-switch (cmd = input('cmd')) {
+switch (cmd = env('cmd')) {
 
     case 'migrate':
     case 'create':
@@ -21,7 +21,7 @@ def migrate() { println 'migrate...' }
 def create() { println 'create...' }
 
 def drop() {
-    def confirm = input('confirm')
+    def confirm = env('confirm')
     def final yes = ['y', 'yes', 'true']
 
     if (!(confirm in yes)) {
@@ -44,9 +44,25 @@ def drop() {
         return 1
     }
 
+    println ''
+    def (username, char[] password) = dbAdminCredentials()
+    println ''
+
     println 'Dropping database...'
+
+    Arrays.fill(password, ' ' as char)
 }
 
-def private input(String name) {
-    ((binding.variables[name] ?: System.properties[name] ?: '') as String).trim().toLowerCase()
+def private env(String name, String defaultValue = '') {
+    ((binding.variables[name] ?: System.properties[name] ?: defaultValue) as String).trim().toLowerCase()
+}
+
+def private dbAdminCredentials() {
+    def console = System.console()
+    if (console) {
+        [console.readLine('DB admin username: ').trim(),
+         console.readPassword('DB admin password: ')]
+    } else {
+        ['', [' '] as char[]]
+    }
 }
