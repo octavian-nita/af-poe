@@ -1,6 +1,6 @@
 package net.appfold.poe.db
 
-switch (cmd = env('cmd')) {
+switch (cmd = env('cmd').toLowerCase()) {
 
     case 'migrate':
     case 'create':
@@ -21,7 +21,7 @@ def migrate() { println 'migrate...' }
 def create() { println 'create...' }
 
 def drop() {
-    def confirm = env('confirm')
+    def confirm = env('confirm').toLowerCase()
     def final yes = ['y', 'yes', 'true']
 
     if (!(confirm in yes)) {
@@ -35,7 +35,7 @@ def drop() {
 
         def console = System.console()
         if (console) {
-            confirm = console.readLine('Drop the database [y/N]: ').trim().toLowerCase()
+            confirm = console.readLine('Drop the database?  [y/N]: ').trim().toLowerCase()
         }
     }
 
@@ -44,7 +44,6 @@ def drop() {
         return 1
     }
 
-    println ''
     def (username, char[] password) = dbAdminCredentials()
     println ''
 
@@ -54,15 +53,26 @@ def drop() {
 }
 
 def private env(String name, String defaultValue = '') {
-    ((binding.variables[name] ?: System.properties[name] ?: defaultValue) as String).trim().toLowerCase()
+    ((binding.variables[name] ?: System.properties[name] ?: defaultValue) as String).trim()
 }
 
 def private dbAdminCredentials() {
+    String username
+    char[] password
+
     def console = System.console()
     if (console) {
-        [console.readLine('DB admin username: ').trim(),
-         console.readPassword('DB admin password: ')]
+
+        username = console.readLine('DB admin username [admin]: ').trim()
+        if (username.length() == 0) {
+            username = 'admin'
+        }
+        password = console.readPassword('DB admin password: ')
+
     } else {
-        ['', [' '] as char[]]
+        username = ''
+        password = [' '] as char[]
     }
+
+    [username, password]
 }
