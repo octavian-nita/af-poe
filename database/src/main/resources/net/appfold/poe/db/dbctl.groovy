@@ -44,35 +44,38 @@ def drop() {
         return 1
     }
 
-    def (username, char[] password) = dbAdminCredentials()
-    println ''
+    withDbAdminCredentials { username, password ->
+        println "${username}:${password}"
+        println 'Dropping database...'
+    }
+}
 
-    println 'Dropping database...'
+def private withDbAdminCredentials(callback) {
+    String username = env('dbAdminUsername')
+    char[] password = env('dbAdminPassword').getBytes()
 
-    Arrays.fill(password, ' ' as char)
+    def console = System.console()
+    if (console) {
+        if (!username) {
+            username = console.readLine('DB admin username [admin]: ').trim()
+            if (!username) {
+                username = 'admin'
+            }
+        }
+        if (!password) {
+            password = console.readPassword('DB admin password: ')
+        }
+    }
+
+    try {
+        callback(username, password)
+    } finally {
+        if (password) {
+            Arrays.fill(password, ' ' as char)
+        }
+    }
 }
 
 def private env(String name, String defaultValue = '') {
     ((binding.variables[name] ?: System.properties[name] ?: defaultValue) as String).trim()
-}
-
-def private dbAdminCredentials() {
-    String username
-    char[] password
-
-    def console = System.console()
-    if (console) {
-
-        username = console.readLine('DB admin username [admin]: ').trim()
-        if (username.length() == 0) {
-            username = 'admin'
-        }
-        password = console.readPassword('DB admin password: ')
-
-    } else {
-        username = ''
-        password = [' '] as char[]
-    }
-
-    [username, password]
 }
