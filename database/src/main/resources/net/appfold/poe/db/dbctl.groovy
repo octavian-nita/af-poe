@@ -8,7 +8,9 @@ import static org.flywaydb.core.api.logging.LogFactory.setFallbackLogCreator
 import static org.flywaydb.core.internal.util.ClassUtils.getLocationOnDisk
 import static org.flywaydb.core.internal.util.logging.console.ConsoleLog.Level.*
 
-println new File(getLocationOnDisk(getClass())).parentFile.parentFile.absolutePath
+println env('basedir', new File(getLocationOnDisk(getClass())).parentFile.parentFile.absolutePath)
+println System.getProperty("user.dir")
+println getClass().getPackage().getName()
 
 switch (cmd = env('db.cmd').toLowerCase()) {
 
@@ -54,16 +56,17 @@ def drop() {
         return 1
     }
 
-    withDbAdminCredentials { username, password ->
-        println "${username}:${password}"
-    }
+    withDbAdminCredentials { username, password -> println "${username}:${password}" }
 }
 
-private env(String name, String defaultValue = '') {
-    ((System.properties[name] ?: System.getenv(name) ?: binding.variables[name] ?:
-                                                        binding.variables.project?.properties?.get(name) ?:
-                                                        binding.variables.project?."${name}" ?:
-                                                        defaultValue) as String).trim()
+private env(String name, def defaultValueOrProvider = '') {
+    def final bindings = binding.variables
+    ((System.properties[name] ?: System.getenv(name) ?: bindings[name] ?: bindings.project?.properties?.get(name) ?:
+                                                                          bindings.project?.hasProperty(name)?.
+                                                                              getProperty(bindings.project) ?:
+                                                                          (defaultValueOrProvider instanceof Closure ?
+                                                                              defaultValueOrProvider.call() :
+                                                                              defaultValueOrProvider)) as String).trim()
 }
 
 private withDbAdminCredentials(callback) {
