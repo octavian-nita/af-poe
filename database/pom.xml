@@ -46,16 +46,16 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
     <!-- DB properties -->
-    <!-- TODO split in generic and db-specific and externalize to environment-specific properties files -->
     <db.host>localhost</db.host>
     <db.port>3306</db.port>
     <db.name>af_poe</db.name>
+
     <db.username>${db.name}</db.username>
     <db.password>YourPasswordIsIncorrect:!)</db.password>
 
     <db.dialect>mariadb</db.dialect>
-    <db.jdbc.url>jdbc:${db.dialect}://${db.host}:${db.port}/${db.name}</db.jdbc.url>
-    <db.jdbc.driver>org.mariadb.jdbc.Driver</db.jdbc.driver>
+    <db.jdbcUrl>jdbc:${db.dialect}://${db.host}:${db.port}/${db.name}</db.jdbcUrl>
+    <db.jdbcDriver>org.mariadb.jdbc.Driver</db.jdbcDriver>
   </properties>
 
   <build>
@@ -107,7 +107,7 @@
             </goals>
             <configuration>
               <properties>
-                <cmd>create</cmd>
+                <db.cmd>create</db.cmd>
               </properties>
             </configuration>
           </execution>
@@ -119,7 +119,7 @@
             </goals>
             <configuration>
               <properties>
-                <cmd>drop</cmd>
+                <db.cmd>drop</db.cmd>
               </properties>
             </configuration>
           </execution>
