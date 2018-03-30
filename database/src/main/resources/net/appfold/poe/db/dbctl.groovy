@@ -1,16 +1,22 @@
 package net.appfold.poe.db
 
+import org.flywaydb.core.api.logging.Log
 import org.flywaydb.core.api.logging.LogFactory
 import org.flywaydb.core.internal.configuration.ConfigUtils
 import org.flywaydb.core.internal.util.logging.console.ConsoleLogCreator
 
+import java.nio.file.Path
+import java.nio.file.Paths
+
+import static java.nio.file.Files.isDirectory
 import static org.flywaydb.core.api.logging.LogFactory.setFallbackLogCreator
-import static org.flywaydb.core.internal.util.ClassUtils.getLocationOnDisk
+import static org.flywaydb.core.internal.configuration.ConfigUtils.JAR_DIRS
+import static org.flywaydb.core.internal.configuration.ConfigUtils.LOCATIONS
 import static org.flywaydb.core.internal.util.logging.console.ConsoleLog.Level.*
 
-println env('basedir', new File(getLocationOnDisk(getClass())).parentFile.parentFile.absolutePath)
-println System.getProperty("user.dir")
-println getClass().getPackage().getName()
+//println env('basedir', new File(getLocationOnDisk(getClass())).parentFile.parentFile.absolutePath)
+println sqlScriptsAbsolutePath()
+return
 
 switch (cmd = env('db.cmd').toLowerCase()) {
 
@@ -59,14 +65,14 @@ def drop() {
     withDbAdminCredentials { username, password -> println "${username}:${password}" }
 }
 
-private env(String name, def defaultValueOrProvider = '') {
-    def final bindings = binding.variables
-    ((System.properties[name] ?: System.getenv(name) ?: bindings[name] ?: bindings.project?.properties?.get(name) ?:
-                                                                          bindings.project?.hasProperty(name)?.
-                                                                              getProperty(bindings.project) ?:
-                                                                          (defaultValueOrProvider instanceof Closure ?
-                                                                              defaultValueOrProvider.call() :
-                                                                              defaultValueOrProvider)) as String).trim()
+private String env(String name, def defaultOrProvider = '') {
+    def final project = binding.variables.project // eventual Maven / Gradle project passed in the script bindings
+    ((System.properties[name] ?: System.getenv(name) ?: project?.properties?.get(name) ?:
+                                                        project?.hasProperty(name)?.getProperty(project) ?:
+                                                        binding.variables[name] ?:
+                                                        (defaultOrProvider instanceof Closure ?
+                                                         defaultOrProvider.call() : defaultOrProvider)) as String).
+        trim()
 }
 
 private withDbAdminCredentials(callback) {
@@ -95,28 +101,7 @@ private withDbAdminCredentials(callback) {
     }
 }
 
-private Properties loadFlywayConfig() {
-    def final properties = new Properties()
-
-    def flywayEnv = ConfigUtils.environmentVariablesToPropertyMap()
-
-    def final basedir = new File(getLocationOnDisk(getClass())).parentFile.parentFile.absolutePath
-
-    //def workDir = env('')  workingDirectory == null ? mavenProject.getBasedir() : workingDirectory;
-
-    properties.put(ConfigUtils.LOCATIONS, "filesystem:" + new File(getInstallationDir(), "sql").getAbsolutePath());
-    properties.put(ConfigUtils.JAR_DIRS, new File(getInstallationDir(), "jars").getAbsolutePath());
-
-    loadConfigurationFromConfigFiles(properties, args, envVars);
-    properties.putAll(envVars);
-    overrideConfigurationWithArgs(properties, args);
-
-    filterProperties(properties);
-
-    properties
-}
-
-private initFlywayLogging() {
+private Log initFlywayLogging() {
     def level
     switch (env('flyway.logLevel')) {
     case '-X':
@@ -131,4 +116,87 @@ private initFlywayLogging() {
     }
     setFallbackLogCreator(new ConsoleLogCreator(level))
     LogFactory.getLog(getClass());
+}
+
+private Properties loadFlywayConfig() {
+    def final properties = new Properties()
+
+    def flywayEnv = ConfigUtils.environmentVariablesToPropertyMap()
+
+    properties.put(LOCATIONS, env(LOCATIONS, { -> 'filesystem:' + sqlScriptsAbsolutePath() + 'migration' }))
+    properties.put(JAR_DIRS, env(JAR_DIRS, { -> sqlScriptsAbsolutePath() + 'migration/jars' }))
+
+    loadConfigurationFromConfigFiles(properties, args, envVars);
+    properties.putAll(envVars);
+    overrideConfigurationWithArgs(properties, args);
+
+    filterProperties(properties);
+
+    properties
+}
+
+private Path sqlScriptsAbsolutePath() {
+    def final basedir = env('basedir', { -> Paths.get('') as String })
+
+    def sqlScriptsRelativePath = env('db.dialect'),
+        sqlScriptsAbsolutePath
+
+
+    sqlScriptsAbsolutePath = Paths.get(basedir, sqlScriptsRelativePath)
+    if (isDirectory(sqlScriptsAbsolutePath)) {
+        return sqlScriptsAbsolutePath.toAbsolutePath().normalize()
+    }
+
+    sqlScriptsAbsolutePath = Paths.get(basedir, 'target', 'classes', sqlScriptsRelativePath) // Maven?
+    if (isDirectory(sqlScriptsAbsolutePath)) {
+        return sqlScriptsAbsolutePath.toAbsolutePath().normalize()
+    }
+
+    sqlScriptsRelativePath = (getClass().package.name.split('\\.') + sqlScriptsRelativePath) as String[]
+
+    sqlScriptsAbsolutePath = Paths.get(basedir, sqlScriptsRelativePath) // under package or namespace?
+    if (isDirectory(sqlScriptsAbsolutePath)) {
+        return sqlScriptsAbsolutePath.toAbsolutePath().normalize()
+    }
+
+    sqlScriptsAbsolutePath = Paths.get(basedir, (['target', 'classes'] + sqlScriptsRelativePath) as String[])
+    if (isDirectory(sqlScriptsAbsolutePath)) {
+        return sqlScriptsAbsolutePath.toAbsolutePath().normalize()
+    }
+
+    Paths.get(basedir, sqlScriptsRelativePath).toAbsolutePath().normalize()
+}
+
+private File location(Class<?> clazz = getClass()) {
+    if (!clazz) {
+        return null
+    }
+
+    String codeBase = clazz.protectionDomain?.codeSource?.location?.path
+    if (!codeBase) {
+        def classRelativePath = clazz.name.replace('.', '/') + '.class'
+        def classUrl = clazz.classLoader?.getResource(classRelativePath)
+
+        if (!classUrl) {
+            classRelativePath = clazz.name.replace('.', '/') + '.groovy'
+            classUrl = clazz.classLoader?.getResource(classRelativePath)
+            if (!classUrl) {
+                return null
+            }
+        }
+
+        codeBase = classUrl as String
+        if ('jar'.equalsIgnoreCase(classUrl.protocol)) {
+            codeBase = codeBase.substring(4).replace('!/' + classRelativePath, '')
+        } else {
+            codeBase = codeBase.replace(classRelativePath, '')
+        }
+    }
+
+    if (codeBase.startsWith('file:')) {
+        codeBase = codeBase.substring(5)
+    }
+
+    def final location = new File(codeBase)
+    location.exists() ? (location.isFile() ? location.parentFile.absoluteFile : location.absoluteFile) : null
 }
