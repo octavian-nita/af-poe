@@ -5,36 +5,29 @@ import org.flywaydb.core.api.logging.LogFactory
 import org.flywaydb.core.internal.configuration.ConfigUtils
 import org.flywaydb.core.internal.util.logging.console.ConsoleLogCreator
 
-import java.nio.file.Path
 import java.nio.file.Paths
 
+import static java.lang.System.err
 import static java.nio.file.Files.isDirectory
 import static org.flywaydb.core.api.logging.LogFactory.setFallbackLogCreator
 import static org.flywaydb.core.internal.configuration.ConfigUtils.JAR_DIRS
 import static org.flywaydb.core.internal.configuration.ConfigUtils.LOCATIONS
 import static org.flywaydb.core.internal.util.logging.console.ConsoleLog.Level.*
 
-//println env('basedir', new File(getLocationOnDisk(getClass())).parentFile.parentFile.absolutePath)
-println sqlScriptsAbsolutePath()
-return
-
 switch (cmd = env('db.cmd').toLowerCase()) {
 
-case 'migrate':
 case 'create':
 case 'drop':
     "$cmd"()
     break
 
 case '':
-    migrate()
-    break
+    err.println "Use -Ddb.cmd=[create|drop] to create / drop the database schema and main user"
+    return 1
 
 default:
     throw new RuntimeException("Database control command '${cmd}' not supported!")
 }
-
-def migrate() { println 'migrate...' }
 
 def create() { println 'create...' }
 
@@ -58,7 +51,7 @@ def drop() {
     }
 
     if (!(confirm in yes)) {
-        println "Use -Ddb.confirmDrop=[${yes.join('|')}] to confirm database dropping"
+        err.println "Use -Ddb.confirmDrop=[${yes.join('|')}] to confirm database dropping"
         return 1
     }
 
@@ -66,7 +59,8 @@ def drop() {
 }
 
 private String env(String name, def defaultOrProvider = '') {
-    def final project = binding.variables.project // eventual Maven / Gradle project passed in the script bindings
+    // Maven / Gradle project passed in bindings?
+    def final project = binding.variables.project
     ((System.properties[name] ?: System.getenv(name) ?: project?.properties?.get(name) ?:
                                                         project?.hasProperty(name)?.getProperty(project) ?:
                                                         binding.variables[name] ?:
@@ -101,6 +95,36 @@ private withDbAdminCredentials(callback) {
     }
 }
 
+private String sqlAbsolutePath() {
+    def final basedir = env('basedir', { Paths.get('') as String })
+
+    def sqlRelativePath = env('db.dialect'), sqlPath
+
+    sqlPath = Paths.get(basedir, sqlRelativePath)
+    if (isDirectory(sqlPath)) {
+        return sqlPath.toAbsolutePath().normalize() as String
+    }
+
+    sqlPath = Paths.get(basedir, 'target', 'classes', sqlRelativePath) // Maven?
+    if (isDirectory(sqlPath)) {
+        return sqlPath.toAbsolutePath().normalize() as String
+    }
+
+    sqlRelativePath = [*getClass().package.name.split('\\.'), sqlRelativePath]
+
+    sqlPath = Paths.get(basedir, *sqlRelativePath) // under package / namespace?
+    if (isDirectory(sqlPath)) {
+        return sqlPath.toAbsolutePath().normalize() as String
+    }
+
+    sqlPath = Paths.get(basedir, 'target', 'classes', *sqlRelativePath)
+    if (isDirectory(sqlPath)) {
+        return sqlPath.toAbsolutePath().normalize() as String
+    }
+
+    Paths.get(basedir, env('db.dialect')).toAbsolutePath().normalize() as String
+}
+
 private Log initFlywayLogging() {
     def level
     switch (env('flyway.logLevel')) {
@@ -123,8 +147,12 @@ private Properties loadFlywayConfig() {
 
     def flywayEnv = ConfigUtils.environmentVariablesToPropertyMap()
 
-    properties.put(LOCATIONS, env(LOCATIONS, { -> 'filesystem:' + sqlScriptsAbsolutePath() + 'migration' }))
-    properties.put(JAR_DIRS, env(JAR_DIRS, { -> sqlScriptsAbsolutePath() + 'migration/jars' }))
+    properties.put(LOCATIONS, env(LOCATIONS, { 'filesystem:' + Paths.get(sqlAbsolutePath(), 'migration') }))
+    properties.put(JAR_DIRS, env(JAR_DIRS, { Paths.get(sqlAbsolutePath(), 'migration', 'jars') }))
+
+    // DROP support (for now) for:
+    // * jar migrations
+    // * loading credentials from Maven settings.xml
 
     loadConfigurationFromConfigFiles(properties, args, envVars);
     properties.putAll(envVars);
@@ -133,70 +161,4 @@ private Properties loadFlywayConfig() {
     filterProperties(properties);
 
     properties
-}
-
-private Path sqlScriptsAbsolutePath() {
-    def final basedir = env('basedir', { -> Paths.get('') as String })
-
-    def sqlScriptsRelativePath = env('db.dialect'),
-        sqlScriptsAbsolutePath
-
-
-    sqlScriptsAbsolutePath = Paths.get(basedir, sqlScriptsRelativePath)
-    if (isDirectory(sqlScriptsAbsolutePath)) {
-        return sqlScriptsAbsolutePath.toAbsolutePath().normalize()
-    }
-
-    sqlScriptsAbsolutePath = Paths.get(basedir, 'target', 'classes', sqlScriptsRelativePath) // Maven?
-    if (isDirectory(sqlScriptsAbsolutePath)) {
-        return sqlScriptsAbsolutePath.toAbsolutePath().normalize()
-    }
-
-    sqlScriptsRelativePath = (getClass().package.name.split('\\.') + sqlScriptsRelativePath) as String[]
-
-    sqlScriptsAbsolutePath = Paths.get(basedir, sqlScriptsRelativePath) // under package or namespace?
-    if (isDirectory(sqlScriptsAbsolutePath)) {
-        return sqlScriptsAbsolutePath.toAbsolutePath().normalize()
-    }
-
-    sqlScriptsAbsolutePath = Paths.get(basedir, (['target', 'classes'] + sqlScriptsRelativePath) as String[])
-    if (isDirectory(sqlScriptsAbsolutePath)) {
-        return sqlScriptsAbsolutePath.toAbsolutePath().normalize()
-    }
-
-    Paths.get(basedir, sqlScriptsRelativePath).toAbsolutePath().normalize()
-}
-
-private File location(Class<?> clazz = getClass()) {
-    if (!clazz) {
-        return null
-    }
-
-    String codeBase = clazz.protectionDomain?.codeSource?.location?.path
-    if (!codeBase) {
-        def classRelativePath = clazz.name.replace('.', '/') + '.class'
-        def classUrl = clazz.classLoader?.getResource(classRelativePath)
-
-        if (!classUrl) {
-            classRelativePath = clazz.name.replace('.', '/') + '.groovy'
-            classUrl = clazz.classLoader?.getResource(classRelativePath)
-            if (!classUrl) {
-                return null
-            }
-        }
-
-        codeBase = classUrl as String
-        if ('jar'.equalsIgnoreCase(classUrl.protocol)) {
-            codeBase = codeBase.substring(4).replace('!/' + classRelativePath, '')
-        } else {
-            codeBase = codeBase.replace(classRelativePath, '')
-        }
-    }
-
-    if (codeBase.startsWith('file:')) {
-        codeBase = codeBase.substring(5)
-    }
-
-    def final location = new File(codeBase)
-    location.exists() ? (location.isFile() ? location.parentFile.absoluteFile : location.absoluteFile) : null
 }
