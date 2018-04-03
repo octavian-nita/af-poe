@@ -5,34 +5,31 @@ import org.flywaydb.core.api.logging.LogFactory
 import org.flywaydb.core.internal.configuration.ConfigUtils
 import org.flywaydb.core.internal.util.logging.console.ConsoleLogCreator
 
+import java.nio.file.Files
 import java.nio.file.Paths
 
-import static java.lang.System.err
-import static java.nio.file.Files.isDirectory
+import static java.lang.reflect.Modifier.*
 import static org.flywaydb.core.api.logging.LogFactory.setFallbackLogCreator
-import static org.flywaydb.core.internal.configuration.ConfigUtils.JAR_DIRS
-import static org.flywaydb.core.internal.configuration.ConfigUtils.LOCATIONS
+import static org.flywaydb.core.internal.configuration.ConfigUtils.*
 import static org.flywaydb.core.internal.util.logging.console.ConsoleLog.Level.*
 
-switch (cmd = env('db.cmd').toLowerCase()) {
+switch (cmd = cfg('db.cmd').toLowerCase()) {
 
 case 'create':
 case 'drop':
     "$cmd"()
     break
 
-case '':
-    err.println "Use -Ddb.cmd=[create|drop] to create / drop the database schema and main user"
-    return 1
-
 default:
-    throw new RuntimeException("Database control command '${cmd}' not supported!")
+    err.println 'Use -Ddb.cmd=[create|drop] to create or drop, respectively, the database schema and main user'
+    throw cmd ? new RuntimeException("Database control command '${cmd}' not supported!")
+              : new RuntimeException('No database control command has been specified!')
 }
 
 def create() { println 'create...' }
 
 def drop() {
-    def confirm = env('db.confirmDrop').toLowerCase()
+    def confirm = cfg('db.confirmDrop').toLowerCase()
     def final yes = ['y', 'yes', 'true']
 
     if (!(confirm in yes)) {
@@ -51,27 +48,27 @@ def drop() {
     }
 
     if (!(confirm in yes)) {
-        err.println "Use -Ddb.confirmDrop=[${yes.join('|')}] to confirm database dropping"
+        System.err.println "Use -Ddb.confirmDrop=[${yes.join('|')}] to confirm database dropping"
         return 1
     }
 
     withDbAdminCredentials { username, password -> println "${username}:${password}" }
 }
 
-private String env(String name, def defaultOrProvider = '') {
+private String cfg(String name, def defaultOrProvider = '') {
     // Maven / Gradle project passed in bindings?
     def final project = binding.variables.project
-    ((System.properties[name] ?: System.getenv(name) ?: project?.properties?.get(name) ?:
-                                                        project?.hasProperty(name)?.getProperty(project) ?:
-                                                        binding.variables[name] ?:
-                                                        (defaultOrProvider instanceof Closure ?
-                                                         defaultOrProvider.call() : defaultOrProvider)) as String).
-        trim()
+    return ((System.properties[name] ?: project?.properties?.get(name) ?:
+                                        project?.hasProperty(name)?.getProperty(project) ?:
+                                        binding.variables[name] ?: System.getenv(name) ?:
+                                                                   (defaultOrProvider instanceof Closure ?
+                                                                    defaultOrProvider.call() :
+                                                                    defaultOrProvider)) as String).trim()
 }
 
 private withDbAdminCredentials(callback) {
-    String username = env('db.adminUsername')
-    char[] password = env('db.adminPassword').getBytes()
+    String username = cfg('db.adminUsername')
+    char[] password = cfg('db.adminPassword').getBytes()
 
     def console = System.console()
     if (console) {
@@ -95,39 +92,41 @@ private withDbAdminCredentials(callback) {
     }
 }
 
-private String sqlAbsolutePath() {
-    def final basedir = env('basedir', { Paths.get('') as String })
+private String absolutePath(String parent = '', String child = '', Closure<?> test = Files.&isRegularFile) {
+    parent = parent ?: ''
+    child = child ?: ''
+    test = test ?: Files.&isRegularFile
 
-    def sqlRelativePath = env('db.dialect'), sqlPath
+    def final basedir = cfg('basedir', { Paths.get('') as String })
 
-    sqlPath = Paths.get(basedir, sqlRelativePath)
-    if (isDirectory(sqlPath)) {
-        return sqlPath.toAbsolutePath().normalize() as String
+    def path = Paths.get(basedir, parent, child)
+    if (test(path)) {
+        return path.toAbsolutePath().normalize() as String
     }
 
-    sqlPath = Paths.get(basedir, 'target', 'classes', sqlRelativePath) // Maven?
-    if (isDirectory(sqlPath)) {
-        return sqlPath.toAbsolutePath().normalize() as String
+    path = Paths.get(basedir, 'target', 'classes', parent, child) // Maven?
+    if (test(path)) {
+        return path.toAbsolutePath().normalize() as String
     }
 
-    sqlRelativePath = [*getClass().package.name.split('\\.'), sqlRelativePath]
+    def final packagePath = [*getClass().package.name.split('\\.'), parent, child]
 
-    sqlPath = Paths.get(basedir, *sqlRelativePath) // under package / namespace?
-    if (isDirectory(sqlPath)) {
-        return sqlPath.toAbsolutePath().normalize() as String
+    path = Paths.get(basedir, *packagePath) // under package / namespace?
+    if (test(path)) {
+        return path.toAbsolutePath().normalize() as String
     }
 
-    sqlPath = Paths.get(basedir, 'target', 'classes', *sqlRelativePath)
-    if (isDirectory(sqlPath)) {
-        return sqlPath.toAbsolutePath().normalize() as String
+    path = Paths.get(basedir, 'target', 'classes', *packagePath)
+    if (test(path)) {
+        return path.toAbsolutePath().normalize() as String
     }
 
-    Paths.get(basedir, env('db.dialect')).toAbsolutePath().normalize() as String
+    return Paths.get(basedir, parent, child).toAbsolutePath().normalize() as String
 }
 
 private Log initFlywayLogging() {
     def level
-    switch (env('flyway.logLevel')) {
+    switch (cfg('flyway.logLevel')) {
     case '-X':
         level = DEBUG
         break
@@ -139,26 +138,37 @@ private Log initFlywayLogging() {
         break
     }
     setFallbackLogCreator(new ConsoleLogCreator(level))
-    LogFactory.getLog(getClass());
+    return LogFactory.getLog(getClass());
 }
 
 private Properties loadFlywayConfig() {
-    def final properties = new Properties()
+    def final config = new Properties()
+    def final load = ConfigUtils.&loadConfigurationFile.rcurry(cfg(CONFIG_FILE_ENCODING, 'UTF-8'), false)
 
-    def flywayEnv = ConfigUtils.environmentVariablesToPropertyMap()
+    // Defaults:
+    config.put(LOCATIONS,
+               cfg(LOCATIONS, { 'filesystem:' + absolutePath(cfg('db.dialect'), 'migration', Files.&isDirectory) }))
 
-    properties.put(LOCATIONS, env(LOCATIONS, { 'filesystem:' + Paths.get(sqlAbsolutePath(), 'migration') }))
-    properties.put(JAR_DIRS, env(JAR_DIRS, { Paths.get(sqlAbsolutePath(), 'migration', 'jars') }))
+    // Configuration files:
+    config.putAll(load(new File(absolutePath('conf', CONFIG_FILE_NAME))))
+    config.putAll(load(new File(System.properties['user.home'] as String, CONFIG_FILE_NAME)))
+    config.putAll(load(new File(CONFIG_FILE_NAME)))
 
-    // DROP support (for now) for:
-    // * jar migrations
-    // * loading credentials from Maven settings.xml
+    //for (File configFile : determineConfigFilesFromArgs(args, envVars)) {
+    //    config.putAll(loadConfigurationFile(configFile, encoding, true));
+    //}
 
-    loadConfigurationFromConfigFiles(properties, args, envVars);
-    properties.putAll(envVars);
-    overrideConfigurationWithArgs(properties, args);
+    // Environment variables & arguments:
+    ConfigUtils.class.declaredFields.each { field ->
+        def final mod = field.modifiers
+        if (String.class == field.getType() && isPublic(mod) && isStatic(mod) && isFinal(mod)) {
+            def key = field.get(null) as String
+            def val = cfg(key, '')
+            if (val) {
+                config.put(key, val)
+            }
+        }
+    }
 
-    filterProperties(properties);
-
-    properties
+    return config
 }
