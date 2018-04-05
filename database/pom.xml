@@ -7,7 +7,7 @@
   <groupId>net.appfold</groupId>
   <artifactId>poe-database</artifactId>
   <version>1.0.0-SNAPSHOT</version>
-  <packaging>pom</packaging>
+  <packaging>jar</packaging>
   <!-- Why pom packaging -->
   <!-- https://stackoverflow.com/a/25545817/272939 -->
   <!-- https://stackoverflow.com/questions/7837778/maven-best-practice-for-creating-ad-hoc-zip-artifact -->
@@ -48,6 +48,7 @@
     <flyway.version>5.0.7</flyway.version>
 
     <!-- DB properties -->
+    <db.dialect>mariadb</db.dialect>
     <db.host>localhost</db.host>
     <db.port>3306</db.port>
     <db.name>af_poe</db.name>
@@ -55,9 +56,7 @@
     <db.username>${db.name}</db.username>
     <db.password>YourPasswordIsIncorrect:!)</db.password>
 
-    <db.dialect>mariadb</db.dialect>
     <db.jdbcUrl>jdbc:${db.dialect}://${db.host}:${db.port}/${db.name}</db.jdbcUrl>
-    <db.jdbcDriver>org.mariadb.jdbc.Driver</db.jdbcDriver>
   </properties>
 
   <build>
@@ -94,6 +93,15 @@
               <filtering>true</filtering>
             </resource>
           </resources>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.7.0</version>
+        <configuration>
+          <source>1.8</source>
+          <target>1.8</target>
         </configuration>
       </plugin>
       <plugin>

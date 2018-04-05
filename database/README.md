@@ -13,3 +13,15 @@
      and admin credentials
    * `mvn install` creates the database schema and main user, asking for admin credentials
    * `mvn flyway:*` performs as described [here](https://flywaydb.org/documentation/maven/)
+
+# TODO
+
+ * basic user model
+   ```yaml
+   user:
+   - login       # natural / business key; [\w-.]{6,64}
+   - email       # not null
+   - password    # not null, hashed
+   - active      # Y/N
+   - displayName # .{1,64}
+   ```

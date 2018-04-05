@@ -1,6 +1,7 @@
 package net.appfold.poe.db
 
 import org.flywaydb.core.Flyway
+import org.flywaydb.core.api.FlywayException
 import org.flywaydb.core.api.configuration.FlywayConfiguration
 import org.flywaydb.core.internal.configuration.ConfigUtils
 import org.flywaydb.core.internal.util.StringUtils
@@ -35,13 +36,7 @@ default:
         cmd ? "Database control command '${cmd}' not supported!" : 'No database control command has been specified!')
 }
 
-def create(FlywayConfiguration config) {
-    final dbDialect = cfg('db.dialect')
-    asDbAdmin(config) { DataSource adminDataSource ->
-        executeSqlScript(absolutePath(dbDialect, "create_db${dbDialect ? '.' + dbDialect : ''}.sql"), config,
-                         adminDataSource)
-    }
-}
+def create(FlywayConfiguration config) { asDbAdmin(config, 'create_db') }
 
 def drop(FlywayConfiguration config) {
     def confirm = cfg('db.confirmDrop').toLowerCase()
@@ -67,24 +62,45 @@ def drop(FlywayConfiguration config) {
         return 1
     }
 
-    final dbDialect = cfg('db.dialect')
-    asDbAdmin(config) { DataSource adminDataSource ->
-        executeSqlScript(absolutePath(dbDialect, "drop_db${dbDialect ? '.' + dbDialect : ''}.sql"), config,
-                         adminDataSource)
-    }
+    asDbAdmin(config, 'drop_db')
 }
 
-private executeSqlScript(String sqlScriptLocation, FlywayConfiguration config, DataSource dataSource = null) {
-    final scriptResource = new FileSystemResource(sqlScriptLocation)
+private asDbAdmin(FlywayConfiguration config, String sqlScriptPrefix) {
+    def dbDialect = cfg('db.dialect')
+    if (dbDialect) {
+        def colonIndex = dbDialect.indexOf(':')
+        if (colonIndex > -1) {
+            dbDialect = dbDialect.substring(0, colonIndex)
+        }
+    }
 
-    createDatabase(dataSource ? new groovy.util.Proxy() {
+    final suffixes = []
+    if (config?.sqlMigrationSuffixes) {
+        suffixes.addAll(config?.sqlMigrationSuffixes)
+    }
+    if (config?.sqlMigrationSuffix && !suffixes.contains(config?.sqlMigrationSuffix)) {
+        suffixes.add(config?.sqlMigrationSuffix)
+    }
+    if (suffixes.isEmpty()) {
+        suffixes.add('.sql')
+    }
 
-        DataSource getDataSource() { dataSource }
+    asDbAdmin(config) { DataSource adminDataSource ->
+        final log = getLog(getClass())
 
-    }.wrap(config) as FlywayConfiguration : config, true).withCloseable { db ->
-
-        db.createSqlScript(scriptResource, scriptResource.loadAsString(config.encoding ?: 'UTF-8'),
-                           config.mixed).execute(db.mainConnection.jdbcTemplate)
+        suffixes.each { sqlScriptSuffix ->
+            final sqlScriptLocation =
+                absolutePath(dbDialect, "${sqlScriptPrefix}${dbDialect ? '.' + dbDialect : ''}${sqlScriptSuffix}")
+            try {
+                executeSqlScript(sqlScriptLocation, config, adminDataSource)
+            } catch (Exception e) {
+                if (e instanceof FlywayException) {
+                    log.error(e.getMessage())
+                } else {
+                    log.error("An error occurred when executing script ${sqlScriptLocation}", e)
+                }
+            }
+        }
     }
 }
 
@@ -106,16 +122,34 @@ private asDbAdmin(FlywayConfiguration config, Closure callback) {
     }
 
     try {
-        // TODO we might attempt to autodetect the driver by default, based on the URL...
         callback(new DriverDataSource(config?.classLoader ?: getClass().classLoader,
+
+                                      // autodetected based on the URL if left empty
                                       cfg('db.jdbcDriver', { cfg('flyway.driver') }),
+
                                       cfg('db.jdbcServerUrl',
                                           { "jdbc:${cfg('db.dialect')}://${cfg('db.host')}:${cfg('db.port')}" }),
+
                                       adminUsername, new String(adminPassword)))
     } finally {
         if (adminPassword) {
             Arrays.fill(adminPassword, ' ' as char)
         }
+    }
+}
+
+private executeSqlScript(String sqlScriptLocation, FlywayConfiguration config, DataSource dataSource = null) {
+    final scriptResource = new FileSystemResource(sqlScriptLocation)
+
+    createDatabase((dataSource || !config) ? new groovy.util.Proxy() {
+
+        DataSource getDataSource() { dataSource }
+
+    }.wrap(config) as FlywayConfiguration : config, true).withCloseable { db ->
+
+        db.createSqlScript(scriptResource, scriptResource.loadAsString(config?.encoding ?: 'UTF-8'),
+                           (config?.mixed ?: true) as boolean).execute(db.mainConnection.jdbcTemplate)
+
     }
 }
 
