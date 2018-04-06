@@ -25,3 +25,11 @@
    - active      # Y/N
    - displayName # .{1,64}
    ```
+
+# Notes To Self
+
+  ## Why we initially considered using _*pom*_ packaging
+
+  * [Answer to SO Question: What is “pom” packaging in maven?](https://stackoverflow.com/a/25545817/272939)
+  * [SO Question: Maven best practice for creating ad hoc zip artifact](https://stackoverflow.com/questions/7837778/maven-best-practice-for-creating-ad-hoc-zip-artifact)
+  * [Plugin bindings for pom packaging](http://maven.apache.org/ref/3.3.3/maven-core/default-bindings.html#Plugin_bindings_for_pom_packaging)
