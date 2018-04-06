@@ -43,7 +43,6 @@
     <project.build.resourceDirectory>src/main/resources</project.build.resourceDirectory>
     <project.build.namespaceDirectory>net/appfold/poe/db</project.build.namespaceDirectory>
     <db.dialect>mariadb</db.dialect>
-
     <flyway.version>5.0.7</flyway.version>
   </properties>
 

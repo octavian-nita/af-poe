@@ -31,9 +31,7 @@ if ((dbProps = new File(cfg('db.properties'))).isFile()) {
     dbProps.withInputStream {
         final props = new Properties()
         props.load(it as InputStream)
-        props.each { key, val ->
-            binding[key as String] = val
-        }
+        props.each { key, val -> binding[key as String] = val }
     }
 }
 
@@ -47,14 +45,13 @@ case 'drop':
 
 default:
     err.println 'Use -Ddb.cmd=[create|drop] to create or drop, respectively, the database schema and main user'
-    throw new RuntimeException(dbCmd ?
-                               "Database control command '${dbCmd}' not supported!" :
+    throw new RuntimeException(dbCmd ? "Database control command '${dbCmd}' not supported!" :
                                'No database control command has been specified!')
 }
 
 //~~~
 
-def create(FlywayConfiguration config) {}
+def create(FlywayConfiguration config) { asDbAdmin(config, 'create_db') }
 
 def drop(FlywayConfiguration config) {
     def confirm = cfg('db.confirmDrop').toLowerCase()
@@ -94,10 +91,10 @@ private asDbAdmin(FlywayConfiguration config, String sqlScriptPrefix) {
 
     final suffixes = []
     if (config?.sqlMigrationSuffixes) {
-        suffixes.addAll(config?.sqlMigrationSuffixes)
+        suffixes.addAll(config.sqlMigrationSuffixes)
     }
-    if (config?.sqlMigrationSuffix && !suffixes.contains(config?.sqlMigrationSuffix)) {
-        suffixes.add(config?.sqlMigrationSuffix)
+    if (config?.sqlMigrationSuffix && !suffixes.contains(config.sqlMigrationSuffix)) {
+        suffixes.add(config.sqlMigrationSuffix)
     }
     if (suffixes.isEmpty()) {
         suffixes.add('.sql')
@@ -112,11 +109,8 @@ private asDbAdmin(FlywayConfiguration config, String sqlScriptPrefix) {
             try {
                 executeSqlScript(sqlScriptLocation, config, adminDataSource)
             } catch (Exception e) {
-                if (e instanceof FlywayException) {
-                    log.error(e.getMessage())
-                } else {
-                    log.error("An error occurred when executing script ${sqlScriptLocation}", e)
-                }
+                e instanceof FlywayException ? log.error(e.getMessage()) :
+                log.error("An error occurred when executing script ${sqlScriptLocation}", e)
             }
         }
     }
@@ -185,7 +179,7 @@ private initFlywayLogging() {
         level = INFO
         break
     }
-    LogFactory.setFallbackLogCreator(new ConsoleLogCreator(level))
+    LogFactory.fallbackLogCreator = new ConsoleLogCreator(level)
 }
 
 private FlywayConfiguration loadFlywayConfig() {
