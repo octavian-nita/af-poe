@@ -19,7 +19,7 @@
  * basic user model
    ```yaml
    user:
-   - login       # natural / business key; [\w-.]{6,64}
+   - login       # natural / business key; [\w-.]{6,24}
    - email       # not null
    - password    # not null, hashed
    - active      # Y/N

@@ -3,6 +3,7 @@ package net.appfold.poe.db
 import org.flywaydb.core.Flyway
 import org.flywaydb.core.api.FlywayException
 import org.flywaydb.core.api.configuration.FlywayConfiguration
+import org.flywaydb.core.api.logging.LogFactory
 import org.flywaydb.core.internal.configuration.ConfigUtils
 import org.flywaydb.core.internal.util.StringUtils
 import org.flywaydb.core.internal.util.jdbc.DriverDataSource
@@ -15,28 +16,45 @@ import java.nio.file.Paths
 
 import static java.lang.System.*
 import static java.lang.reflect.Modifier.*
-import static org.flywaydb.core.api.logging.LogFactory.getLog
-import static org.flywaydb.core.api.logging.LogFactory.setFallbackLogCreator
 import static org.flywaydb.core.internal.configuration.ConfigUtils.*
 import static org.flywaydb.core.internal.database.DatabaseFactory.createDatabase
 import static org.flywaydb.core.internal.util.Location.FILESYSTEM_PREFIX
 import static org.flywaydb.core.internal.util.logging.console.ConsoleLog.Level.*
 
 initFlywayLogging()
-switch (cmd = cfg('db.cmd').toLowerCase()) {
+
+def dbProps
+if ((dbProps = new File(cfg('db.properties'))).isFile()) {
+
+    LogFactory.getLog(getClass()).
+        info("Loading database connection, migrations, etc. properties from ${dbProps.absolutePath}...")
+    dbProps.withInputStream {
+        final props = new Properties()
+        props.load(it as InputStream)
+        props.each { key, val ->
+            binding[key as String] = val
+        }
+    }
+}
+
+def dbCmd
+switch (dbCmd = cfg('db.cmd').toLowerCase()) {
 
 case 'create':
 case 'drop':
-    "$cmd"(loadFlywayConfig())
+    "$dbCmd"(loadFlywayConfig())
     break
 
 default:
     err.println 'Use -Ddb.cmd=[create|drop] to create or drop, respectively, the database schema and main user'
-    throw new RuntimeException(
-        cmd ? "Database control command '${cmd}' not supported!" : 'No database control command has been specified!')
+    throw new RuntimeException(dbCmd ?
+                               "Database control command '${dbCmd}' not supported!" :
+                               'No database control command has been specified!')
 }
 
-def create(FlywayConfiguration config) { asDbAdmin(config, 'create_db') }
+//~~~
+
+def create(FlywayConfiguration config) {}
 
 def drop(FlywayConfiguration config) {
     def confirm = cfg('db.confirmDrop').toLowerCase()
@@ -86,7 +104,7 @@ private asDbAdmin(FlywayConfiguration config, String sqlScriptPrefix) {
     }
 
     asDbAdmin(config) { DataSource adminDataSource ->
-        final log = getLog(getClass())
+        final log = LogFactory.getLog(getClass())
 
         suffixes.each { sqlScriptSuffix ->
             final sqlScriptLocation =
@@ -147,6 +165,7 @@ private executeSqlScript(String sqlScriptLocation, FlywayConfiguration config, D
 
     }.wrap(config) as FlywayConfiguration : config, true).withCloseable { db ->
 
+        // Not supporting placeholders for now...
         db.createSqlScript(scriptResource, scriptResource.loadAsString(config?.encoding ?: 'UTF-8'),
                            (config?.mixed ?: true) as boolean).execute(db.mainConnection.jdbcTemplate)
 
@@ -166,11 +185,12 @@ private initFlywayLogging() {
         level = INFO
         break
     }
-    setFallbackLogCreator(new ConsoleLogCreator(level))
+    LogFactory.setFallbackLogCreator(new ConsoleLogCreator(level))
 }
 
 private FlywayConfiguration loadFlywayConfig() {
-    final config = new Properties()
+    final log = LogFactory.getLog(getClass())
+    final config = [:]
     final cfgEnc = cfg(CONFIG_FILE_ENCODING, 'UTF-8')
     final loadOpt = ConfigUtils.&loadConfigurationFile.rcurry(cfgEnc, false)
     final loadMnd = ConfigUtils.&loadConfigurationFile.rcurry(cfgEnc, true)
@@ -186,7 +206,7 @@ private FlywayConfiguration loadFlywayConfig() {
 
     def configFiles = cfg(CONFIG_FILE)
     if (configFiles) {
-        getLog(getClass()).warn('configFile is deprecated and will be removed in Flyway 6.0. Use configFiles instead.')
+        log.warn('configFile is deprecated and will be removed in Flyway 6.0. Use configFiles instead.')
         config.putAll(loadMnd(new File(configFiles)))
     }
     configFiles = cfg(CONFIG_FILES)
@@ -214,12 +234,10 @@ private FlywayConfiguration loadFlywayConfig() {
     config.remove(CONFIG_FILE_ENCODING)
 
     // Dump configuration (debug purposes)
-    final log = getLog(getClass())
     log.debug('Using configuration:')
-    for (def entry : config.entrySet()) {
-        def value = entry.value as String
-        value = PASSWORD == entry.key ? StringUtils.trimOrPad('', value.length(), '*' as char) : value
-        log.debug("${entry.key} -> ${value}")
+    config.each { key, val ->
+        val = PASSWORD == key ? StringUtils.trimOrPad('', (val as String).length(), '*' as char) : val
+        log.debug("${key} -> ${val}")
     }
 
     // In Flyway versions prior to 6, org.flywaydb.core.Flyway seems to be the only class implementing the
@@ -230,31 +248,28 @@ private FlywayConfiguration loadFlywayConfig() {
     return flyway
 }
 
-private String absolutePath(String parent = '', String child = '', Closure<?> test = Files.&isRegularFile) {
+private String absolutePath(String parent = '', String child = '',
+                            Closure<?> test = Files.&isRegularFile,
+                            String basedir = cfg('basedir', { Paths.get('') as String })) {
     parent = parent ?: ''
     child = child ?: ''
     test = test ?: Files.&isRegularFile
-
-    final basedir = cfg('basedir', { Paths.get('') as String })
 
     def path = Paths.get(basedir, parent, child)
     if (test(path)) {
         return path.toAbsolutePath().normalize() as String
     }
-
-    path = Paths.get(basedir, 'target', 'classes', parent, child) // Maven?
+    path = Paths.get(basedir, cfg('build.outputDirectory', 'target/classes'), parent, child) // Maven?
     if (test(path)) {
         return path.toAbsolutePath().normalize() as String
     }
-
-    final packagePath = [*getClass().package.name.split('\\.'), parent, child]
-
-    path = Paths.get(basedir, *packagePath) // under package / namespace?
+    path = Paths.get(basedir, cfg('build.namespaceDirectory', { getClass().package.name.replace('.', '/') }),
+                     parent, child) // under package / namespace?
     if (test(path)) {
         return path.toAbsolutePath().normalize() as String
     }
-
-    path = Paths.get(basedir, 'target', 'classes', *packagePath)
+    path = Paths.get(basedir, cfg('build.outputDirectory', 'target/classes'),
+                     cfg('build.namespaceDirectory', { getClass().package.name.replace('.', '/') }), parent, child)
     if (test(path)) {
         return path.toAbsolutePath().normalize() as String
     }
