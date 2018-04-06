@@ -11,8 +11,9 @@
  * assuming a database server running and accessible at an agreed upon url:
    * `mvn clean` drops the database schema and main user, asking for confirmation
      and admin credentials
-   * `mvn install` creates the database schema and main user, asking for admin credentials
+   * `mvn deploy` creates the database schema and main user, asking for admin credentials
    * `mvn flyway:*` performs as described [here](https://flywaydb.org/documentation/maven/)
+     (though one should usually execute `mvn resources:resources flyway:*`!)
 
 # TODO
 
