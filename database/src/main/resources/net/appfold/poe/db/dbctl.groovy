@@ -17,18 +17,18 @@ import java.nio.file.Paths
 import static java.lang.System.*
 import static java.lang.reflect.Modifier.*
 import static net.appfold.poe.db.OptValue.*
+import static org.flywaydb.core.api.logging.LogFactory.getLog
 import static org.flywaydb.core.internal.configuration.ConfigUtils.*
 import static org.flywaydb.core.internal.database.DatabaseFactory.createDatabase
 import static org.flywaydb.core.internal.util.Location.FILESYSTEM_PREFIX
 import static org.flywaydb.core.internal.util.logging.console.ConsoleLog.Level.*
 
-initFlywayLogging()
+final log = initFlywayLogging()
 
-def dbProps
+final dbProps
 if ((dbProps = new File(cfg('db.properties'))).isFile()) {
 
-    LogFactory.getLog(getClass()).
-        debug("Loading database connection, migrations, etc. properties from ${dbProps.absolutePath}...")
+    log.debug("Loading database connection, migrations, etc. properties from ${dbProps.absolutePath}...")
     dbProps.withInputStream {
         final props = new Properties()
         props.load(it as InputStream)
@@ -36,38 +36,47 @@ if ((dbProps = new File(cfg('db.properties'))).isFile()) {
     }
 }
 
-def optGiven = false
+final operations = [:] as LinkedHashMap
 
 def dbOpt = cfg('db.drop')
 if (dbOpt) {
-    optGiven = true
-    drop(loadFlywayConfig(), dbOpt)
+    operations['drop'] = dbOpt
 }
 
-if (YES.eq(cfg('db.create'))) {
-    optGiven = true
-    create(loadFlywayConfig())
+dbOpt = cfg('db.create')
+if (dbOpt) {
+    operations['create'] = dbOpt
 }
 
-if (!optGiven) {
-    println "Use -Ddb.drop=[${opts(YES, FORCE)}] to drop and/or -Ddb.create=[${opts(YES)}] " +
-            "to create the database schema and main user"
+if (operations.isEmpty()) {
+    log.info("Use -Ddb.drop=[${opts(YES, FORCE)}] to drop and/or -Ddb.create=[${opts(YES)}] " +
+             'to create the database schema and main user')
+} else {
+    final flywayConfig = loadFlywayConfig()
+    operations.each { operation, option ->
+        try {
+            "$operation"(flywayConfig, option)
+        } catch (ex) {
+            handle(ex, { "An error occurred while executing operation ${operation}" })
+        }
+    }
 }
 
 //~~~
 
-def create(FlywayConfiguration config) { asDbAdmin(config, 'create_db') }
+def create(FlywayConfiguration config, def createOpt) { asDbAdmin(config, 'create_db') }
 
 def drop(FlywayConfiguration config, def dropOpt) {
+    final log = getLog(getClass())
 
     if (YES.eq(dropOpt)) {
-        println ''
-        println '!! WARNING !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
-        println '!!                                                          !!'
-        println '!! Serious data loss might occur when dropping the database !!'
-        println '!!                                                          !!'
-        println '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
-        println ''
+        log.info('')
+        log.info('!! WARNING !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+        log.info('!!                                                          !!')
+        log.info('!! Serious data loss might occur when dropping the database !!')
+        log.info('!!                                                          !!')
+        log.info('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+        log.info('')
 
         def console = console()
         if (console && YES.eq(console.readLine('Drop the database?  (y/N): ').trim())) {
@@ -78,11 +87,13 @@ def drop(FlywayConfiguration config, def dropOpt) {
     if (FORCE.eq(dropOpt)) {
         asDbAdmin(config, 'drop_db')
     } else {
-        println "Use -Ddb.drop=[${opts(YES, FORCE)}] to drop the database schema and main user"
+        log.error("Use -Ddb.drop=[${opts(YES, FORCE)}] to drop the database schema and main user")
     }
 }
 
 private asDbAdmin(FlywayConfiguration config, String sqlScriptPrefix) {
+    final log = getLog(getClass())
+
     def dbDialect = cfg('db.dialect')
     if (dbDialect) {
         def colonIndex = dbDialect.indexOf(':')
@@ -104,8 +115,6 @@ private asDbAdmin(FlywayConfiguration config, String sqlScriptPrefix) {
 
     def dbDryRun = YES.eq(cfg('db.dryRun'))
     asDbAdmin(config) { DataSource adminDataSource ->
-        final log = LogFactory.getLog(getClass())
-
         suffixes.each { sqlScriptSuffix ->
             final sqlScriptLocation =
                 absolutePath(dbDialect, "${sqlScriptPrefix}${dbDialect ? '.' + dbDialect : ''}${sqlScriptSuffix}")
@@ -114,9 +123,8 @@ private asDbAdmin(FlywayConfiguration config, String sqlScriptPrefix) {
             if (!dbDryRun) {
                 try {
                     executeSqlScript(sqlScriptLocation, config, adminDataSource)
-                } catch (Exception e) {
-                    e instanceof FlywayException ? log.error(e.getMessage()) :
-                    log.error("An error occurred when executing script ${sqlScriptLocation}", e)
+                } catch (ex) {
+                    handle(ex, { "An error occurred while executing script ${sqlScriptLocation}" })
                 }
             }
         }
@@ -187,10 +195,11 @@ private initFlywayLogging() {
         break
     }
     LogFactory.fallbackLogCreator = new ConsoleLogCreator(level)
+    return getLog(getClass())
 }
 
 private FlywayConfiguration loadFlywayConfig() {
-    final log = LogFactory.getLog(getClass())
+    final log = getLog(getClass())
     final config = [:]
     final cfgEnc = cfg(CONFIG_FILE_ENCODING, 'UTF-8')
     final loadOpt = ConfigUtils.&loadConfigurationFile.rcurry(cfgEnc, false)
@@ -288,7 +297,17 @@ private String cfg(String name, def defaultOrProvider = '') {
              project?.hasProperty(name)?.getProperty(project) ?:
              binding.variables[name]                          ?:
              getenv(name)                                     ?://@fmt:on
-             (defaultOrProvider instanceof Closure ? defaultOrProvider.call() : defaultOrProvider)) as String).trim()
+             (defaultOrProvider && defaultOrProvider instanceof Closure ? defaultOrProvider.call() :
+              defaultOrProvider)) as String).trim()
+}
+
+private handle(Exception exception, def msgOrProvider = '') {
+    if (exception) {
+        final log = getLog(getClass())
+        exception instanceof FlywayException ? log.error(exception.getMessage()) :
+        log.error((msgOrProvider && msgOrProvider instanceof Closure ? msgOrProvider.call() : msgOrProvider) as String,
+                  exception)
+    }
 }
 
 enum OptValue {
