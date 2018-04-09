@@ -28,7 +28,7 @@ def dbProps
 if ((dbProps = new File(cfg('db.properties'))).isFile()) {
 
     LogFactory.getLog(getClass()).
-        info("Loading database connection, migrations, etc. properties from ${dbProps.absolutePath}...")
+        debug("Loading database connection, migrations, etc. properties from ${dbProps.absolutePath}...")
     dbProps.withInputStream {
         final props = new Properties()
         props.load(it as InputStream)
@@ -102,17 +102,22 @@ private asDbAdmin(FlywayConfiguration config, String sqlScriptPrefix) {
         suffixes.add('.sql')
     }
 
+    def dbDryRun = YES.eq(cfg('db.dryRun'))
     asDbAdmin(config) { DataSource adminDataSource ->
         final log = LogFactory.getLog(getClass())
 
         suffixes.each { sqlScriptSuffix ->
             final sqlScriptLocation =
                 absolutePath(dbDialect, "${sqlScriptPrefix}${dbDialect ? '.' + dbDialect : ''}${sqlScriptSuffix}")
-            try {
-                executeSqlScript(sqlScriptLocation, config, adminDataSource)
-            } catch (Exception e) {
-                e instanceof FlywayException ? log.error(e.getMessage()) :
-                log.error("An error occurred when executing script ${sqlScriptLocation}", e)
+            log.info("Executing script ${sqlScriptLocation}${dbDryRun ? ' (dry run)' : '...'}")
+
+            if (!dbDryRun) {
+                try {
+                    executeSqlScript(sqlScriptLocation, config, adminDataSource)
+                } catch (Exception e) {
+                    e instanceof FlywayException ? log.error(e.getMessage()) :
+                    log.error("An error occurred when executing script ${sqlScriptLocation}", e)
+                }
             }
         }
     }
@@ -288,7 +293,7 @@ private String cfg(String name, def defaultOrProvider = '') {
 
 enum OptValue {
 
-    FORCE('f', 'force', 'true'), YES('y', 'yes', 'true')
+    FORCE('f', 'force'), YES('y', 'yes')
 
     private final synonyms = []
 
