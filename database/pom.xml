@@ -120,15 +120,15 @@
         <executions>
           <execution>
             <id>dbctl-create</id>
-            <phase>deploy</phase>
+            <phase>install</phase>
             <goals>
               <goal>execute</goal>
             </goals>
-            <configuration>
+            <!--configuration>
               <properties>
-                <db.cmd>create</db.cmd>
+                <db.create>true</db.create>
               </properties>
-            </configuration>
+            </configuration-->
           </execution>
           <execution>
             <id>dbctl-drop</id>
@@ -136,11 +136,11 @@
             <goals>
               <goal>execute</goal>
             </goals>
-            <configuration>
+            <!--configuration>
               <properties>
-                <db.cmd>drop</db.cmd>
+                <db.drop>true</db.drop>
               </properties>
-            </configuration>
+            </configuration-->
           </execution>
         </executions>
         <configuration>

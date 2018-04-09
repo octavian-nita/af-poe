@@ -16,6 +16,7 @@ import java.nio.file.Paths
 
 import static java.lang.System.*
 import static java.lang.reflect.Modifier.*
+import static net.appfold.poe.db.OptValue.*
 import static org.flywaydb.core.internal.configuration.ConfigUtils.*
 import static org.flywaydb.core.internal.database.DatabaseFactory.createDatabase
 import static org.flywaydb.core.internal.util.Location.FILESYSTEM_PREFIX
@@ -35,29 +36,31 @@ if ((dbProps = new File(cfg('db.properties'))).isFile()) {
     }
 }
 
-def dbCmd
-switch (dbCmd = cfg('db.cmd').toLowerCase()) {
+def optGiven = false
 
-case 'create':
-case 'drop':
-    "$dbCmd"(loadFlywayConfig())
-    break
+def dbOpt = cfg('db.drop')
+if (dbOpt) {
+    optGiven = true
+    drop(loadFlywayConfig(), dbOpt)
+}
 
-default:
-    err.println 'Use -Ddb.cmd=[create|drop] to create or drop, respectively, the database schema and main user'
-    throw new RuntimeException(dbCmd ? "Database control command '${dbCmd}' not supported!" :
-                               'No database control command has been specified!')
+if (YES.eq(cfg('db.create'))) {
+    optGiven = true
+    create(loadFlywayConfig())
+}
+
+if (!optGiven) {
+    println "Use -Ddb.drop=[${opts(YES, FORCE)}] to drop and/or -Ddb.create=[${opts(YES)}] " +
+            "to create the database schema and main user"
 }
 
 //~~~
 
 def create(FlywayConfiguration config) { asDbAdmin(config, 'create_db') }
 
-def drop(FlywayConfiguration config) {
-    def confirm = cfg('db.confirmDrop').toLowerCase()
-    final yes = ['y', 'yes', 'true']
+def drop(FlywayConfiguration config, def dropOpt) {
 
-    if (!(confirm in yes)) {
+    if (YES.eq(dropOpt)) {
         println ''
         println '!! WARNING !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
         println '!!                                                          !!'
@@ -67,17 +70,16 @@ def drop(FlywayConfiguration config) {
         println ''
 
         def console = console()
-        if (console) {
-            confirm = console.readLine('Drop the database?  [y/N]: ').trim().toLowerCase()
+        if (console && YES.eq(console.readLine('Drop the database?  (y/N): ').trim())) {
+            dropOpt = FORCE
         }
     }
 
-    if (!(confirm in yes)) {
-        err.println "Use -Ddb.confirmDrop=[${yes.join('|')}] to confirm database dropping"
-        return 1
+    if (FORCE.eq(dropOpt)) {
+        asDbAdmin(config, 'drop_db')
+    } else {
+        println "Use -Ddb.drop=[${opts(YES, FORCE)}] to drop the database schema and main user"
     }
-
-    asDbAdmin(config, 'drop_db')
 }
 
 private asDbAdmin(FlywayConfiguration config, String sqlScriptPrefix) {
@@ -123,9 +125,9 @@ private asDbAdmin(FlywayConfiguration config, Closure callback) {
     def console = console()
     if (console) {
         if (!adminUsername) {
-            adminUsername = console.readLine('DB admin username [admin]: ').trim()
+            adminUsername = console.readLine('DB admin username (root): ').trim()
             if (!adminUsername) {
-                adminUsername = 'admin'
+                adminUsername = 'root'
             }
         }
         if (!adminPassword) {
@@ -282,4 +284,26 @@ private String cfg(String name, def defaultOrProvider = '') {
              binding.variables[name]                          ?:
              getenv(name)                                     ?://@fmt:on
              (defaultOrProvider instanceof Closure ? defaultOrProvider.call() : defaultOrProvider)) as String).trim()
+}
+
+enum OptValue {
+
+    FORCE('f', 'force', 'true'), YES('y', 'yes', 'true')
+
+    private final synonyms = []
+
+    OptValue(String... synonyms) {
+        if (synonyms) {
+            this.synonyms.addAll(synonyms)
+        }
+    }
+
+    @Override
+    String toString() { synonyms.join('|') }
+
+    static String opts(OptValue... values) { values?.join('|') ?: '' }
+
+    boolean eq(def value) {
+        value && (value instanceof OptValue ? equals(value) : synonyms.contains((value as String).toLowerCase()))
+    }
 }
