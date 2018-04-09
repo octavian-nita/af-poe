@@ -70,16 +70,17 @@ def drop(FlywayConfiguration config, def dropOpt) {
     final log = getLog(getClass())
 
     if (YES.eq(dropOpt)) {
-        log.info('')
-        log.info('!! WARNING !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
-        log.info('!!                                                          !!')
-        log.info('!! Serious data loss might occur when dropping the database !!')
-        log.info('!!                                                          !!')
-        log.info('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
-        log.info('')
+        log.info("""
+
+!! WARNING !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!                                                          !!
+!! Serious data loss might occur when dropping the database !!
+!!                                                          !!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+""")
 
         def console = console()
-        if (console && YES.eq(console.readLine('Drop the database?  (y/N): ').trim())) {
+        if (console && YES.eq(console.readLine('Drop the database? (y/N): ').trim())) {
             dropOpt = FORCE
         }
     }
