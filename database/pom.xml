@@ -48,7 +48,6 @@
 
   <build>
     <plugins>
-
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-resources-plugin</artifactId>
@@ -94,7 +93,7 @@
           </properties>
           <scripts>
             <script>
-              ${project.build.resourceDirectory}/${project.build.namespaceDirectory}/dbctl.groovy
+              ${project.build.directory}/dbctl.groovy
             </script>
           </scripts>
         </configuration>
@@ -116,7 +115,6 @@
           </locations>
         </configuration>
       </plugin>
-
     </plugins>
   </build>
 

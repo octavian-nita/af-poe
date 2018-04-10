@@ -1,5 +1,3 @@
-package net.appfold.poe.db
-
 import org.flywaydb.core.Flyway
 import org.flywaydb.core.api.FlywayException
 import org.flywaydb.core.api.configuration.FlywayConfiguration
@@ -13,9 +11,9 @@ import javax.sql.DataSource
 import java.nio.file.Files
 import java.nio.file.Paths
 
+import static OptValue.*
 import static java.lang.System.*
 import static java.lang.reflect.Modifier.*
-import static net.appfold.poe.db.OptValue.*
 import static org.flywaydb.core.api.logging.LogFactory.fallbackLogCreator
 import static org.flywaydb.core.api.logging.LogFactory.getLog
 import static org.flywaydb.core.internal.configuration.ConfigUtils.*
