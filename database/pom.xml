@@ -48,26 +48,11 @@
 
   <build>
     <plugins>
+
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-resources-plugin</artifactId>
         <version>3.0.2</version>
-        <executions>
-          <execution>
-            <id>process-sql-scripts-on-clean</id>
-            <phase>clean</phase>
-            <goals>
-              <goal>resources</goal>
-            </goals>
-          </execution>
-          <execution>
-            <id>process-sql-scripts-on-deploy</id>
-            <phase>deploy</phase>
-            <goals>
-              <goal>resources</goal>
-            </goals>
-          </execution>
-        </executions>
         <configuration>
           <outputDirectory>${project.build.outputDirectory}</outputDirectory>
           <resources>
@@ -87,60 +72,18 @@
           </filters>
         </configuration>
       </plugin>
-      <!-- For Java-based migrations (https://flywaydb.org/getstarted/java), etc. -->
-      <!--plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.7.0</version>
-        <configuration>
-          <source>1.8</source>
-          <target>1.8</target>
-        </configuration>
-      </plugin-->
-      <!-- Should be called after resources:resources... -->
-      <plugin>
-        <groupId>org.flywaydb</groupId>
-        <artifactId>flyway-maven-plugin</artifactId>
-        <version>${flyway.version}</version>
-        <configuration>
-          <configFile>
-            ${project.build.outputDirectory}/${project.build.namespaceDirectory}/${db.dialect}/db.properties
-          </configFile>
-          <locations>
-            <location>
-              filesystem:${project.build.outputDirectory}/${project.build.namespaceDirectory}/${db.dialect}/migration
-            </location>
-          </locations>
-        </configuration>
-      </plugin>
+
       <plugin>
         <groupId>org.codehaus.gmavenplus</groupId>
         <artifactId>gmavenplus-plugin</artifactId>
         <version>1.6</version>
         <executions>
           <execution>
-            <id>dbctl-create</id>
+            <id>dbctl</id>
             <phase>install</phase>
             <goals>
               <goal>execute</goal>
             </goals>
-            <!--configuration>
-              <properties>
-                <db.create>true</db.create>
-              </properties>
-            </configuration-->
-          </execution>
-          <execution>
-            <id>dbctl-drop</id>
-            <phase>clean</phase>
-            <goals>
-              <goal>execute</goal>
-            </goals>
-            <!--configuration>
-              <properties>
-                <db.drop>true</db.drop>
-              </properties>
-            </configuration-->
           </execution>
         </executions>
         <configuration>
@@ -156,6 +99,24 @@
           </scripts>
         </configuration>
       </plugin>
+
+      <!-- Make sure resources:resources is executed at least once before this! -->
+      <plugin>
+        <groupId>org.flywaydb</groupId>
+        <artifactId>flyway-maven-plugin</artifactId>
+        <version>${flyway.version}</version>
+        <configuration>
+          <configFile>
+            ${project.build.outputDirectory}/${project.build.namespaceDirectory}/${db.dialect}/db.properties
+          </configFile>
+          <locations>
+            <location>
+              filesystem:${project.build.outputDirectory}/${project.build.namespaceDirectory}/${db.dialect}/migration
+            </location>
+          </locations>
+        </configuration>
+      </plugin>
+
     </plugins>
   </build>
 

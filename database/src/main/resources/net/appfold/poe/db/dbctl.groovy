@@ -3,7 +3,6 @@ package net.appfold.poe.db
 import org.flywaydb.core.Flyway
 import org.flywaydb.core.api.FlywayException
 import org.flywaydb.core.api.configuration.FlywayConfiguration
-import org.flywaydb.core.api.logging.LogFactory
 import org.flywaydb.core.internal.configuration.ConfigUtils
 import org.flywaydb.core.internal.util.StringUtils
 import org.flywaydb.core.internal.util.jdbc.DriverDataSource
@@ -17,6 +16,7 @@ import java.nio.file.Paths
 import static java.lang.System.*
 import static java.lang.reflect.Modifier.*
 import static net.appfold.poe.db.OptValue.*
+import static org.flywaydb.core.api.logging.LogFactory.fallbackLogCreator
 import static org.flywaydb.core.api.logging.LogFactory.getLog
 import static org.flywaydb.core.internal.configuration.ConfigUtils.*
 import static org.flywaydb.core.internal.database.DatabaseFactory.createDatabase
@@ -52,21 +52,26 @@ if (operations.isEmpty()) {
     log.info("Use -Ddb.drop=[${opts(YES, FORCE)}] to drop and/or -Ddb.create=[${opts(YES)}] " +
              'to create the database schema and main user')
 } else {
-    final flywayConfig = loadFlywayConfig()
-    operations.each { operation, option ->
-        try {
-            "$operation"(flywayConfig, option)
-        } catch (ex) {
-            handle(ex, { "An error occurred while executing operation ${operation}" })
+    asDbAdmin(loadFlywayConfig()) { adminDataSource, config ->
+
+        operations.each { operation, option ->
+
+            try {
+                "$operation"(adminDataSource, config, option)
+            } catch (ex) {
+                handle(ex, { "An error occurred while executing operation ${operation}" })
+            }
         }
     }
 }
 
 //~~~
 
-def create(FlywayConfiguration config, def createOpt) { asDbAdmin(config, 'create_db') }
+def create(DataSource dataSource, FlywayConfiguration config, def createOpt) {
+    executeSqlScripts(dataSource, config, 'create_db')
+}
 
-def drop(FlywayConfiguration config, def dropOpt) {
+def drop(DataSource dataSource, FlywayConfiguration config, def dropOpt) {
     final log = getLog(getClass())
 
     if (YES.eq(dropOpt)) {
@@ -86,49 +91,9 @@ def drop(FlywayConfiguration config, def dropOpt) {
     }
 
     if (FORCE.eq(dropOpt)) {
-        asDbAdmin(config, 'drop_db')
+        executeSqlScripts(dataSource, config, 'drop_db')
     } else {
         log.error("Use -Ddb.drop=[${opts(YES, FORCE)}] to drop the database schema and main user")
-    }
-}
-
-private asDbAdmin(FlywayConfiguration config, String sqlScriptPrefix) {
-    final log = getLog(getClass())
-
-    def dbDialect = cfg('db.dialect')
-    if (dbDialect) {
-        def colonIndex = dbDialect.indexOf(':')
-        if (colonIndex > -1) {
-            dbDialect = dbDialect.substring(0, colonIndex)
-        }
-    }
-
-    final suffixes = []
-    if (config?.sqlMigrationSuffixes) {
-        suffixes.addAll(config.sqlMigrationSuffixes)
-    }
-    if (config?.sqlMigrationSuffix && !suffixes.contains(config.sqlMigrationSuffix)) {
-        suffixes.add(config.sqlMigrationSuffix)
-    }
-    if (suffixes.isEmpty()) {
-        suffixes.add('.sql')
-    }
-
-    def dbDryRun = YES.eq(cfg('db.dryRun'))
-    asDbAdmin(config) { DataSource adminDataSource ->
-        suffixes.each { sqlScriptSuffix ->
-            final sqlScriptLocation =
-                absolutePath(dbDialect, "${sqlScriptPrefix}${dbDialect ? '.' + dbDialect : ''}${sqlScriptSuffix}")
-            log.info("Executing script ${sqlScriptLocation}${dbDryRun ? ' (dry run)' : '...'}")
-
-            if (!dbDryRun) {
-                try {
-                    executeSqlScript(sqlScriptLocation, config, adminDataSource)
-                } catch (ex) {
-                    handle(ex, { "An error occurred while executing script ${sqlScriptLocation}" })
-                }
-            }
-        }
     }
 }
 
@@ -158,7 +123,7 @@ private asDbAdmin(FlywayConfiguration config, Closure callback) {
                                       cfg('db.jdbcServerUrl',
                                           { "jdbc:${cfg('db.dialect')}://${cfg('db.host')}:${cfg('db.port')}" }),
 
-                                      adminUsername, new String(adminPassword)))
+                                      adminUsername, new String(adminPassword)), config)
     } finally {
         if (adminPassword) {
             Arrays.fill(adminPassword, ' ' as char)
@@ -166,7 +131,53 @@ private asDbAdmin(FlywayConfiguration config, Closure callback) {
     }
 }
 
-private executeSqlScript(String sqlScriptLocation, FlywayConfiguration config, DataSource dataSource = null) {
+private executeSqlScripts(DataSource dataSource, FlywayConfiguration config, String... sqlScriptPrefixes) {
+    if (!sqlScriptPrefixes) {
+        return
+    }
+
+    final log = getLog(getClass())
+    final dry = YES.eq(cfg('db.dryRun'))
+
+    final sqlScriptSuffixes = []
+    if (config?.sqlMigrationSuffixes) {
+        sqlScriptSuffixes.addAll(config.sqlMigrationSuffixes)
+    }
+    if (config?.sqlMigrationSuffix && !sqlScriptSuffixes.contains(config.sqlMigrationSuffix)) {
+        sqlScriptSuffixes.add(config.sqlMigrationSuffix)
+    }
+    if (sqlScriptSuffixes.isEmpty()) {
+        sqlScriptSuffixes.add('.sql')
+    }
+
+    def dbDialect = cfg('db.dialect')
+    if (dbDialect) {
+        def colonIndex = dbDialect.indexOf(':')
+        if (colonIndex > -1) {
+            dbDialect = dbDialect.substring(0, colonIndex)
+        }
+    }
+
+    sqlScriptPrefixes.each { sqlScriptPrefix ->
+
+        sqlScriptSuffixes.each { sqlScriptSuffix ->
+
+            final sqlScriptLocation =
+                absolutePath(dbDialect, "${sqlScriptPrefix}${dbDialect ? '.' + dbDialect : ''}${sqlScriptSuffix}")
+            log.info("Executing script ${sqlScriptLocation}${dry ? ' (dry run)' : '...'}")
+
+            if (!dry) {
+                try {
+                    executeSqlScript(dataSource, config, sqlScriptLocation)
+                } catch (ex) {
+                    handle(ex, { "An error occurred while executing script ${sqlScriptLocation}" })
+                }
+            }
+        }
+    }
+}
+
+private executeSqlScript(DataSource dataSource, FlywayConfiguration config, String sqlScriptLocation) {
     final scriptResource = new FileSystemResource(sqlScriptLocation)
 
     createDatabase((dataSource || !config) ? new groovy.util.Proxy() {
@@ -195,7 +206,7 @@ private initFlywayLogging() {
         level = INFO
         break
     }
-    LogFactory.fallbackLogCreator = new ConsoleLogCreator(level)
+    fallbackLogCreator = new ConsoleLogCreator(level)
     return getLog(getClass())
 }
 
@@ -254,7 +265,7 @@ private FlywayConfiguration loadFlywayConfig() {
     // In Flyway versions prior to 6, org.flywaydb.core.Flyway seems to be the only class implementing the
     // org.flywaydb.core.api.configuration.FlywayConfiguration interface hence the easiest way to obtain a
     // configuration is as follows:
-    final Flyway flyway = new Flyway()
+    final flyway = new Flyway()
     flyway.configure(config)
     return flyway
 }
@@ -292,8 +303,7 @@ private String cfg(String name, def defaultOrProvider = '') {
     // Maven / Gradle project passed in bindings?
     final project = binding.variables.project
 
-    //@fmt:off
-    return ((properties[name]                                 ?:
+    return ((properties[name] ?: //@fmt:off
              project?.properties?.get(name)                   ?:
              project?.hasProperty(name)?.getProperty(project) ?:
              binding.variables[name]                          ?:
@@ -302,12 +312,12 @@ private String cfg(String name, def defaultOrProvider = '') {
               defaultOrProvider)) as String).trim()
 }
 
-private handle(Exception exception, def msgOrProvider = '') {
+private handle(Exception exception, def messageOrProvider = '') {
     if (exception) {
         final log = getLog(getClass())
-        exception instanceof FlywayException ? log.error(exception.getMessage()) :
-        log.error((msgOrProvider && msgOrProvider instanceof Closure ? msgOrProvider.call() : msgOrProvider) as String,
-                  exception)
+        exception instanceof FlywayException ? log.error(exception.getMessage()) : log.error(
+            (messageOrProvider && messageOrProvider instanceof Closure ? messageOrProvider.call() :
+             messageOrProvider) as String, exception)
     }
 }
 
