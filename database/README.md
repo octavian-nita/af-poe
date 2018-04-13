@@ -1,9 +1,13 @@
 # af-poe/database: A Relational Database Model
 
-  * gathers common practices, recipes and tips for creating and evolving a project's relational database model
-  * the resulting (_jar_) artifact contains SQL scripts ([loadable from the classpath](https://docs.oracle.com/javase/10/docs/api/java/lang/Class.html#getResourceAsStream%28java.lang.String%29)
-    and organized by dialect) and (eventually) [Flyway Java-based migrations](https://flywaydb.org/getstarted/java) to
-    _drop_, _create_ and _migrate_ a relational database schema for the _af-poe_ project
+This Maven-based project/module follows common practices, recipes and tips to allow the creation and evolution
+of a relational database schema for the _[af-poe](https://github.com/octavian-nita/af-poe)_ project.
+
+The resulting (_jar_) artifact contains SQL scripts, organized by dialect, that can be [loaded from the classpath](
+https://docs.oracle.com/javase/10/docs/api/java/lang/Class.html#getResourceAsStream%28java.lang.String%29) and
+(eventually) [Flyway Java-based migrations](https://flywaydb.org/getstarted/java) to
+_drop_, _create_ and _migrate_ the relational database schema of the _af-poe_ project
+
   * currently only the MariaDB SQL dialect is explicitly supported Java-based migrations
     should probably be dialect-agnostic
   * (at least the initial) migrations are organized by feature: upon execution, one migration fully creates the
