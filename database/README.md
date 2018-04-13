@@ -18,6 +18,7 @@
 ### User Model
 
 01. Read
+    * [User Authentication Best Practices Checklist](https://techblog.bozho.net/user-authentication-best-practices-checklist/)
     * [Implementing User Authentication the Right Way](http://stackabuse.com/implementing-user-authentication-the-right-way/)
     * [Building The Optimal User Database Model For Your Application](https://www.getdonedone.com/building-the-optimal-user-database-model-for-your-application/)
     * [Modeling users](https://www.railstutorial.org/book/modeling_users)
