@@ -1,21 +1,28 @@
 # af-poe/database: A Relational Database Model
 
-This Maven-based project/module follows common practices, recipes and tips to allow the creation and evolution
-of a relational database schema for the _[af-poe](https://github.com/octavian-nita/af-poe)_ project.
+This project / module tries to extract and outline _common wisdom_ (practices, recipes and tips) employed when
+_setting up_ and _maintaining_ a _relational database schema_ and modeling common requirements such as _users_
+and _data auditing_. The primary goal is not to come up with the best, most comprehensive model we can but with
+a _simple_, _good-enough_ one that can be easily assimilated.
 
-The resulting (_jar_) artifact contains SQL scripts, organized by dialect, that can be [loaded from the classpath](
-https://docs.oracle.com/javase/10/docs/api/java/lang/Class.html#getResourceAsStream%28java.lang.String%29) and
-(eventually) [Flyway Java-based migrations](https://flywaydb.org/getstarted/java) to
-_drop_, _create_ and _migrate_ the relational database schema of the _af-poe_ project
+The project being organised as a [Maven](https://maven.apache.org/) module, the resulting (_jar_) artifact contains:
 
-  * currently only the MariaDB SQL dialect is explicitly supported Java-based migrations
-    should probably be dialect-agnostic
-  * (at least the initial) migrations are organized by feature: upon execution, one migration fully creates the
-    model for one feature (e.g. an expense journal with entries and categories, a user model, an audit model...)
-  * leverages the [Flyway Maven plugin](https://flywaydb.org/documentation/maven/) to allow evolving the schema
-    from the command line
+* _SQL scripts_, organized by dialect, that can be [loaded from the classpath](
+https://docs.oracle.com/javase/10/docs/api/java/lang/Class.html#getResourceAsStream%28java.lang.String%29)
+* (eventually) compiled _[Flyway Java-based migrations](https://flywaydb.org/getstarted/java)_
+* database and migration configuration file(s)
+
+that can be used to _drop_, _create_ and / or _migrate_ the _[af-poe](https://github.com/octavian-nita/af-poe)_ project
+schema. Currently, only the MariaDB SQL dialect is explicitly supported; Java-based migrations should generally be
+dialect-agnostic.
+
+At least the initial migrations are _organized by feature_: upon execution, one migration fully creates the model for
+one feature (e.g. an expense journal with entries and categories, a user model, a data audit model).
 
 ## Basic Usage
+
+The project leverages the [Flyway Maven plugin](https://flywaydb.org/documentation/maven/) to allow evolving the schema
+from the command line.
 
 ## TODO
 
@@ -55,9 +62,13 @@ _drop_, _create_ and _migrate_ the relational database schema of the _af-poe_ pr
          ```
        * trigger(s) (before) INSERT and UPDATE to ensure the extra columns are populated
 
-## Notes To Self
+## Notes
+
+### Do use
+
+* [SQL Style Guide](http://www.sqlstyle.guide/)
 
 ### Why we initially considered using _*pom*_ packaging
-  * [Answer to SO Question: What is “pom” packaging in maven?](https://stackoverflow.com/a/25545817/272939)
-  * [SO Question: Maven best practice for creating ad hoc zip artifact](https://stackoverflow.com/questions/7837778/maven-best-practice-for-creating-ad-hoc-zip-artifact)
-  * [Plugin bindings for pom packaging](http://maven.apache.org/ref/3.3.3/maven-core/default-bindings.html#Plugin_bindings_for_pom_packaging)
+* [Answer to SO Question: What is “pom” packaging in maven?](https://stackoverflow.com/a/25545817/272939)
+* [SO Question: Maven best practice for creating ad hoc zip artifact](https://stackoverflow.com/questions/7837778/maven-best-practice-for-creating-ad-hoc-zip-artifact)
+* [Plugin bindings for pom packaging](http://maven.apache.org/ref/3.3.3/maven-core/default-bindings.html#Plugin_bindings_for_pom_packaging)
