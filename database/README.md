@@ -1,28 +1,55 @@
-# af-poe/database: A Relational Database Model
+# af-poe/database: A Relational Database Model for the [af-poe](https://github.com/octavian-nita/af-poe) Project
 
-This project / module tries to extract and outline _common wisdom_ (practices, recipes and tips) employed when
-_setting up_ and _maintaining_ a _relational database schema_ and modeling common requirements such as _users_
-and _data auditing_. The primary goal is not to come up with the best, most comprehensive model we can but with
-a _simple_, _good-enough_ one that can be easily assimilated.
+This module tries to extract and outline _common wisdom_ (practices, recipes, tips) employed to _set up_ and _evolve_ a
+_relational database schema_ and to _model_ common requirements such as _users_ and _data auditing_. The primary goal is
+not to come up with the best, most comprehensive model we could but with a _simple_, _good-enough_ one that "does the
+job" and can easily be assimilated.
 
 The project being organised as a [Maven](https://maven.apache.org/) module, the resulting (_jar_) artifact contains:
-
-* _SQL scripts_, organized by dialect, that can be [loaded from the classpath](
-https://docs.oracle.com/javase/10/docs/api/java/lang/Class.html#getResourceAsStream%28java.lang.String%29)
+* _SQL scripts_, organized by dialect (currently, only the _MariaDB_ SQL dialect is supported)
 * (eventually) compiled _[Flyway Java-based migrations](https://flywaydb.org/getstarted/java)_
-* database and migration configuration file(s)
+* database and migration _configuration file(s)_
+that can be used to _drop_, _create_ and _migrate_ the _[af-poe](https://github.com/octavian-nita/af-poe)_ schema.
 
-that can be used to _drop_, _create_ and / or _migrate_ the _[af-poe](https://github.com/octavian-nita/af-poe)_ project
-schema. Currently, only the MariaDB SQL dialect is explicitly supported; Java-based migrations should generally be
-dialect-agnostic.
+Migrations should generally be _organized by feature_: upon execution, one migration fully creates the model for
+one feature alone (e.g. one migration creates the expense journal entries and categories, another - the user model etc.)
 
-At least the initial migrations are _organized by feature_: upon execution, one migration fully creates the model for
-one feature (e.g. an expense journal with entries and categories, a user model, a data audit model).
+## Usage
 
-## Basic Usage
+### Manual schema dropping, creation and migration using Maven
 
-The project leverages the [Flyway Maven plugin](https://flywaydb.org/documentation/maven/) to allow evolving the schema
-from the command line.
+The project leverages the [Flyway](https://flywaydb.org/) [Maven plugin](https://flywaydb.org/documentation/maven/)
+to allow executing migrations (as well as other Flyway goals) directly from the command line or during the
+[default build lifecycle](https://maven.apache.org/guides/introduction/introduction-to-the-lifecycle.html). Note that
+before executing `mvn flyway:migrate`, `mvn resources:resources` should have already been executed at least once in
+order for the database and migration configuration file(s) to be properly generated.
+
+Moreover, by specifying `db.drop` and / or `db.create` properties when executing `mvn install` the user instructs the
+build to drop and create, respectively, the af-poe database schema and an associated user with proper access rights
+(both named `af_poe` by default). The user will be prompted for a database admin username and password, unless he
+specifies the `db.adminUsername` and / or `db.adminPassword` properties as well.
+
+1. Drop the schema when building the project; `force` / `f` inhibits a warning about how dangerous dropping the schema is
+   ```
+   mvn clean install -Ddb.drop=y
+   
+   mvn -Ddb.drop=force install
+   ```
+
+2. Create the schema when building the project; the admin username is `root`, the admin password is `r00t`
+   ```
+   mvn clean install -Ddb.create=yes -Ddb.adminUsername=root -Ddb.adminPassword=r00t
+   ```
+
+3. The 2 operations can always be combined, no matter in which order; only the admin password prompt will appear now
+   ```
+   mvn clean -Ddb.drop=f -Ddb.create=y -Ddb.adminUsername=root install
+   ```
+
+### Automated migrations for JVM-based modules
+
+From a JVM-based project / module, simply depend on the generated artifact and employ the available
+[Flyway API](https://flywaydb.org/documentation/api/), as described.
 
 ## TODO
 
@@ -62,13 +89,8 @@ from the command line.
          ```
        * trigger(s) (before) INSERT and UPDATE to ensure the extra columns are populated
 
-## Notes
+## Resources
 
-### Do use
-
+* [Database versioning best practices](http://enterprisecraftsmanship.com/2015/08/10/database-versioning-best-practices/)
+* [20 Database Design Best Practices](https://dzone.com/articles/20-database-design-best)
 * [SQL Style Guide](http://www.sqlstyle.guide/)
-
-### Why we initially considered using _*pom*_ packaging
-* [Answer to SO Question: What is “pom” packaging in maven?](https://stackoverflow.com/a/25545817/272939)
-* [SO Question: Maven best practice for creating ad hoc zip artifact](https://stackoverflow.com/questions/7837778/maven-best-practice-for-creating-ad-hoc-zip-artifact)
-* [Plugin bindings for pom packaging](http://maven.apache.org/ref/3.3.3/maven-core/default-bindings.html#Plugin_bindings_for_pom_packaging)

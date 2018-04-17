@@ -1,7 +1,7 @@
 --
 -- Entries in a simple EXpense Journal.
 --
-CREATE TABLE t_exj_entry (
+CREATE TABLE journal_entry (
 
   id          INTEGER UNSIGNED        NOT NULL UNIQUE AUTO_INCREMENT            COMMENT 'The entry technical identifier',
   posted_on   DATETIME                NOT NULL        DEFAULT CURRENT_TIMESTAMP COMMENT 'The date (and time) the entry has been posted on; may be different from the actual transaction date, usually soon after',
@@ -16,10 +16,10 @@ CREATE TABLE t_exj_entry (
 --
 -- Categories for the expense journal entries.
 --
-CREATE TABLE t_exj_category (
+CREATE TABLE entry_category (
 
-  id          VARCHAR(255)  NOT NULL UNIQUE COMMENT 'A category code for an entry, e.g. OTHER, GROC for groceries... useful for reporting, grouping, insights, etc.; also a technical identifier',
-  description VARCHAR(1000)                 COMMENT 'Optional description / details for the category',
+  id          VARCHAR(24)  NOT NULL UNIQUE COMMENT 'A category code for an entry, e.g. OTHER, GROC for groceries... useful for reporting, grouping, insights, etc.; also a technical identifier',
+  description VARCHAR(1000)                COMMENT 'Optional description / details for the category',
 
   PRIMARY KEY (id)
 );
@@ -27,12 +27,12 @@ CREATE TABLE t_exj_category (
 --
 -- Associates expense journal entries with categories (many-to-many).
 --
-CREATE TABLE t_exj_entry_category (
+CREATE TABLE entry_category_mapping (
 
   entry_id    INTEGER UNSIGNED NOT NULL UNIQUE,
   category_id VARCHAR(255)     NOT NULL UNIQUE,
 
-  FOREIGN KEY (entry_id)    REFERENCES t_exj_entry (id),
-  FOREIGN KEY (category_id) REFERENCES t_exj_category (id),
+  FOREIGN KEY (entry_id)    REFERENCES journal_entry (id),
+  FOREIGN KEY (category_id) REFERENCES entry_category (id),
   PRIMARY KEY (entry_id, category_id)
 );
