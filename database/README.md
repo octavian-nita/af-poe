@@ -2,19 +2,26 @@
 
 This module tries to extract and outline _common wisdom_ (practices, recipes, tips) employed to _set up_ and _evolve_ a
 _relational database schema_ and to _model_ common requirements such as _users_ and _data auditing_. The primary goal is
-not to come up with the best, most comprehensive model we could but with a _simple_, _good-enough_ one that "does the
+not to come up with the best, most comprehensive model we could but with a _simple_, yet _real-world_ one that "does the
 job" and can easily be assimilated.
 
 The project being organised as a [Maven](https://maven.apache.org/) module, the resulting (_jar_) artifact contains:
 * _SQL scripts_, organized by dialect (currently, only the _MariaDB_ SQL dialect is supported)
 * (eventually) compiled _[Flyway Java-based migrations](https://flywaydb.org/getstarted/java)_
 * database and migration _configuration file(s)_
-that can be used to _drop_, _create_ and _migrate_ the _[af-poe](https://github.com/octavian-nita/af-poe)_ schema.
+that can be invoked to _drop_, _create_ and _migrate_ the _[af-poe](https://github.com/octavian-nita/af-poe)_ schema.
 
 Migrations should generally be _organized by feature_: upon execution, one migration fully creates the model for
 one feature alone (e.g. one migration creates the expense journal entries and categories, another - the user model etc.)
 
 ## Usage
+
+Before building the project or manually creating / migrating the schema, make sure ...
+
+### Automated migrations for JVM-based modules
+
+From a JVM-based project / module, simply depend on the generated artifact and employ the available
+[Flyway](https://flywaydb.org/getstarted/java) [API](https://flywaydb.org/documentation/api/).
 
 ### Manual schema dropping, creation and migration using Maven
 
@@ -45,11 +52,6 @@ specifies the `db.adminUsername` and / or `db.adminPassword` properties as well.
    ```
    mvn clean -Ddb.drop=f -Ddb.create=y -Ddb.adminUsername=root install
    ```
-
-### Automated migrations for JVM-based modules
-
-From a JVM-based project / module, simply depend on the generated artifact and employ the available
-[Flyway API](https://flywaydb.org/documentation/api/), as described.
 
 ## TODO
 

@@ -42,8 +42,16 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.build.resourceDirectory>src/main/resources</project.build.resourceDirectory>
     <project.build.namespaceDirectory>net/appfold/poe/db</project.build.namespaceDirectory>
-    <db.dialect>mariadb</db.dialect>
     <flyway.version>5.0.7</flyway.version>
+
+    <db.dialect>mariadb</db.dialect>
+    <db.host>localhost</db.host>
+    <db.port>3306</db.port>
+    <db.name>af_poe</db.name>
+    <db.username>${db.name}</db.username>
+    <db.password>YourPasswordIsIncorrect!:)</db.password>
+    <db.jdbcUrl>jdbc:${db.dialect}://${db.host}:${db.port}/${db.name}</db.jdbcUrl>
+
   </properties>
 
   <build>
