@@ -49,7 +49,8 @@
     <db.port>3306</db.port>
     <db.name>af_poe</db.name>
     <db.username>${db.name}</db.username>
-    <db.password>YourPasswordIsIncorrect!:)</db.password>
+    <!-- We're deliberately not storing any passwords by default... -->
+    <!--db.password></db.password-->
     <db.jdbcUrl>jdbc:${db.dialect}://${db.host}:${db.port}/${db.name}</db.jdbcUrl>
 
   </properties>
@@ -72,11 +73,6 @@
               <filtering>true</filtering>
             </resource>
           </resources>
-          <filters>
-            <filter>
-              ${project.build.resourceDirectory}/${project.build.namespaceDirectory}/${db.dialect}/db.properties
-            </filter>
-          </filters>
         </configuration>
       </plugin>
 
