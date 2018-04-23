@@ -68,7 +68,7 @@ specifies the `db.adminUsername` and / or `db.adminPassword` properties as well.
       user:
         - login       # natural / business key; [\w-.]{6,24}
         - email       # not null
-        - password    # not null, hashed
+        - password    # not null, hashed; .{1,18}
         - active      # Y/N
         - displayName # .{1,256}
       ```
