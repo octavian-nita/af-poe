@@ -48,9 +48,12 @@
     <db.host>localhost</db.host>
     <db.port>3306</db.port>
     <db.name>af_poe</db.name>
-    <db.username>${db.name}</db.username>
-    <!-- We're deliberately not storing any passwords by default... -->
-    <!--db.password></db.password-->
+    <db.user>${db.name}</db.user>
+    <!-- No mechanism to store database passwords is provided by default!
+         Rather, the user should explicitly provide them depending on the
+         particular context s/he's in! In this build, we're requiring that
+         the db.password be set. -->
+    <flyway.password>${db.password}</flyway.password>
     <db.jdbcUrl>jdbc:${db.dialect}://${db.host}:${db.port}/${db.name}</db.jdbcUrl>
 
   </properties>
@@ -73,6 +76,11 @@
               <filtering>true</filtering>
             </resource>
           </resources>
+          <filters>
+            <filter>
+              ${project.build.resourceDirectory}/${project.build.namespaceDirectory}/${db.dialect}/db.properties
+            </filter>
+          </filters>
         </configuration>
       </plugin>
 
