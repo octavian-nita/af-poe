@@ -24,7 +24,7 @@ import static org.flywaydb.core.internal.util.logging.console.ConsoleLog.Level.*
 final log = initFlywayLogging()
 
 final dbProps
-if ((dbProps = new File(cfg('db.properties'))).isFile()) {
+if ((dbProps = new File(cfg('ds.properties'))).isFile()) {
 
     log.debug("Loading database connection, migrations, etc. properties from ${dbProps.absolutePath}...")
     dbProps.withInputStream {

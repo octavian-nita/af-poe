@@ -1,6 +1,6 @@
 # af-poe/database: A Relational Database Model for the [af-poe](https://github.com/octavian-nita/af-poe) Project
 
-This module tries to extract and outline _common wisdom_ (practices, recipes, tips) employed to _set up_ and _evolve_ a
+One of the goals of this module is to extract and outline _common wisdom_ (practices, recipes, tips) employed to _set up_ and _evolve_ a
 _relational database schema_ and to _model_ common requirements such as _users_ and _data auditing_. The primary goal is
 not to come up with the best, most comprehensive model we could but with a _simple_, yet _real-world_ one that "does the
 job" and can easily be assimilated.
@@ -66,7 +66,7 @@ specifies the `db.adminUsername` and / or `db.adminPassword` properties as well.
 02. Implement, as migration, a basic user model
     * ```yaml
       user:
-        - login       # natural / business key; [\w-.]{6,24}
+        - login       # natural / business key; [\w-.]{5,24}
         - email       # not null
         - password    # not null, hashed; .{1,18}
         - active      # Y/N
@@ -84,9 +84,9 @@ specifies the `db.adminUsername` and / or `db.adminPassword` properties as well.
        * extra columns added to audited tables (all initially); while the semantics of ```created_on``` and
          ```modififed_on``` is to point to ```user.login```, we will probably not want to define foreign keys for them
          ```yaml
-         - created_by  # not null, [\w-.]{6,24}
-         - created_on  # not null
-         - modified_by # not null, [\w-.]{6,24}
+         - created_by  # not null, [\w-.]{,128} (created_by VARCHAR(128) NOT NULL DEFAULT CURRENT_USER)
+         - created_on  # not null               (created_on DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP)
+         - modified_by # not null, [\w-.]{,128}
          - modified_on # not null
          ```
        * trigger(s) (before) INSERT and UPDATE to ensure the extra columns are populated
