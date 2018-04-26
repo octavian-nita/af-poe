@@ -86,7 +86,6 @@
         <version>1.6</version>
         <executions>
           <execution>
-            <id>dbctl</id>
             <phase>install</phase>
             <goals>
               <goal>execute</goal>
@@ -96,7 +95,7 @@
         <configuration>
           <properties>
             <ds.properties>
-              ${project.build.outputDirectory}/${project.build.namespaceDirectory}/${db.dialect}/db.properties
+              ${project.build.outputDirectory}/${project.build.namespaceDirectory}/${db.dialect}/ds.properties
             </ds.properties>
           </properties>
           <scripts>
@@ -107,14 +106,21 @@
         </configuration>
       </plugin>
 
-      <!-- Make sure resources:resources is executed at least once before this! -->
       <plugin>
         <groupId>org.flywaydb</groupId>
         <artifactId>flyway-maven-plugin</artifactId>
         <version>${flyway.version}</version>
+        <executions>
+          <execution>
+            <phase>install</phase>
+            <goals>
+              <goal>migrate</goal>
+            </goals>
+          </execution>
+        </executions>
         <configuration>
           <configFile>
-            ${project.build.outputDirectory}/${project.build.namespaceDirectory}/${db.dialect}/db.properties
+            ${project.build.outputDirectory}/${project.build.namespaceDirectory}/${db.dialect}/ds.properties
           </configFile>
           <locations>
             <location>

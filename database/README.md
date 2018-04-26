@@ -1,22 +1,33 @@
-# af-poe/database: A Relational Database Model for the [af-poe](https://github.com/octavian-nita/af-poe) Project
+# af-poe/database: An SQL Database Model for the [af-poe](https://github.com/octavian-nita/af-poe) Project
 
-One of the goals of this module is to extract and outline _common wisdom_ (practices, recipes, tips) employed to _set up_ and _evolve_ a
-_relational database schema_ and to _model_ common requirements such as _users_ and _data auditing_. The primary goal is
-not to come up with the best, most comprehensive model we could but with a _simple_, yet _real-world_ one that "does the
-job" and can easily be assimilated.
+---
+> __Resolution__
+>
+> _Don’t say relational database when referring to SQL databases. SQL is really more than just relational._
+>
+> * [Markus Winand on Modern SQL](https://modern-sql.com/blog/2018-04/mysql-8.0)
+---
 
-The project being organised as a [Maven](https://maven.apache.org/) module, the resulting (_jar_) artifact contains:
-* _SQL scripts_, organized by dialect (currently, only the _MariaDB_ SQL dialect is supported)
+Among the goals of this (sub)project:
+* _extract and outline __common wisdom___ (practices, recipes, tips) employed when ___setting up___ and ___evolving___
+  an ___SQL database schema___
+* _model __common requirements___ (e.g. ___users___, ___data auditing___) using not the best, most comprehensive model
+  possible but a ___simple___, yet ___real-world___ one that "does the job" and can easily be assimilated
+
+## Build Output
+
+Being currently organised as a [Maven](https://maven.apache.org/) module, the resulting (_jar_) artifact contains:
+* _SQL (migration) scripts_, organized by dialect (only the _MariaDB_ SQL dialect is supported for now)
 * (eventually) compiled _[Flyway Java-based migrations](https://flywaydb.org/getstarted/java)_
 * database and migration _configuration file(s)_
-that can be invoked to _drop_, _create_ and _migrate_ the _[af-poe](https://github.com/octavian-nita/af-poe)_ schema.
+  that can be invoked to _drop_, _create_ and _migrate_ the _[af-poe](https://github.com/octavian-nita/af-poe)_ schema.
 
-Migrations should generally be _organized by feature_: upon execution, one migration fully creates the model for
+If the ```production``` profile is used when building...
+
+_Migrations_ should generally be ___organized by feature___: upon execution, one migration fully creates the model for
 one feature alone (e.g. one migration creates the expense journal entries and categories, another - the user model etc.)
 
 ## Usage
-
-Before building the project or manually creating / migrating the schema, make sure ...
 
 ### Automated migrations for JVM-based modules
 
