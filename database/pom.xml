@@ -4,45 +4,21 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
-  <groupId>net.appfold</groupId>
+  <parent>
+    <groupId>net.appfold</groupId>
+    <artifactId>af-poe</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+  </parent>
   <artifactId>poe-database</artifactId>
   <version>1.0.0-SNAPSHOT</version>
   <packaging>jar</packaging>
 
   <name>poe-database</name>
   <url>https://github.com/octavian-nita/af-poe/tree/master/database</url>
-  <description>af-poe: A Relational Database Model</description>
-
-  <developers>
-    <developer>
-      <id>octavian-nita</id>
-      <name>Octavian Nita</name>
-      <email>octavian.nita@gmail.com</email>
-      <url>https://github.com/octavian-nita</url>
-      <roles>
-        <role>architect</role>
-        <role>developer</role>
-      </roles>
-      <timezone>+1</timezone>
-    </developer>
-  </developers>
-
-  <issueManagement>
-    <url>https://github.com/octavian-nita/af-poe/issues</url>
-    <system>af-poe Issues on GitHub</system>
-  </issueManagement>
-
-  <scm>
-    <url>https://github.com/octavian-nita/af-poe</url>
-    <connection>scm:git:git://github.com/octavian-nita/af-poe.git</connection>
-    <developerConnection>scm:git:git@github.com:octavian-nita/af-poe.git</developerConnection>
-  </scm>
+  <description>af-poe: An SQL Database Model</description>
 
   <properties>
-    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <project.build.resourceDirectory>src/main/resources</project.build.resourceDirectory>
-    <project.build.namespaceDirectory>net/appfold/poe/db</project.build.namespaceDirectory>
-    <flyway.version>5.0.7</flyway.version>
+    <project.build.package>net/appfold/poe/db</project.build.package>
 
     <db.dialect>mariadb</db.dialect>
     <db.host>localhost</db.host>
@@ -59,22 +35,18 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-resources-plugin</artifactId>
-        <version>3.0.2</version>
         <configuration>
-          <outputDirectory>${project.build.outputDirectory}</outputDirectory>
           <resources>
             <resource>
-              <directory>${project.build.resourceDirectory}</directory>
               <includes>
                 <include>**/${db.dialect}/**/*.sql</include>
                 <include>**/${db.dialect}/**/*.properties</include>
               </includes>
-              <filtering>true</filtering>
             </resource>
           </resources>
           <filters>
             <filter>
-              ${project.build.resourceDirectory}/${project.build.namespaceDirectory}/${db.dialect}/ds.properties
+              ${project.build.resourceDirectory}/${project.build.package}/${db.dialect}/ds.properties
             </filter>
           </filters>
         </configuration>
@@ -90,26 +62,24 @@
             <goals>
               <goal>execute</goal>
             </goals>
+            <configuration>
+              <properties>
+                <ds.properties>
+                  ${project.build.outputDirectory}/${project.build.package}/${db.dialect}/ds.properties
+                </ds.properties>
+              </properties>
+              <scripts>
+                <script>file:///${project.basedir}/dbctl.groovy</script>
+              </scripts>
+            </configuration>
           </execution>
         </executions>
-        <configuration>
-          <properties>
-            <ds.properties>
-              ${project.build.outputDirectory}/${project.build.namespaceDirectory}/${db.dialect}/ds.properties
-            </ds.properties>
-          </properties>
-          <scripts>
-            <script>
-              ${project.build.directory}/dbctl.groovy
-            </script>
-          </scripts>
-        </configuration>
       </plugin>
 
       <plugin>
         <groupId>org.flywaydb</groupId>
         <artifactId>flyway-maven-plugin</artifactId>
-        <version>${flyway.version}</version>
+        <version>${version.flyway}</version>
         <executions>
           <execution>
             <phase>install</phase>
@@ -120,11 +90,11 @@
         </executions>
         <configuration>
           <configFile>
-            ${project.build.outputDirectory}/${project.build.namespaceDirectory}/${db.dialect}/ds.properties
+            ${project.build.outputDirectory}/${project.build.package}/${db.dialect}/ds.properties
           </configFile>
           <locations>
             <location>
-              filesystem:${project.build.outputDirectory}/${project.build.namespaceDirectory}/${db.dialect}/migration
+              ${project.build.outputDirectory}/${project.build.package}/${db.dialect}/migration
             </location>
           </locations>
         </configuration>
@@ -136,17 +106,14 @@
     <dependency>
       <groupId>org.mariadb.jdbc</groupId>
       <artifactId>mariadb-java-client</artifactId>
-      <version>2.2.3</version>
-    </dependency>
-    <dependency>
-      <groupId>org.codehaus.groovy</groupId>
-      <artifactId>groovy-all</artifactId>
-      <version>2.4.15</version>
     </dependency>
     <dependency>
       <groupId>org.flywaydb</groupId>
       <artifactId>flyway-core</artifactId>
-      <version>${flyway.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.codehaus.groovy</groupId>
+      <artifactId>groovy-all</artifactId>
     </dependency>
   </dependencies>
 </project>

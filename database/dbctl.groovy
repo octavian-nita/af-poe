@@ -47,8 +47,8 @@ if (dbOpt) {
 }
 
 if (operations.isEmpty()) {
-    log.info("Use -Ddb.drop=[${opts(YES, FORCE)}] to drop and/or -Ddb.create=[${opts(YES)}] " +
-             'to create the database schema and main user')
+    log.info("Use -Ddb.drop=[${opts(YES, FORCE)}] to drop " +
+             "and -Ddb.create=[${opts(YES)}] to create the database schema and main user")
 } else {
     asDbAdmin(loadFlywayConfig()) { adminDataSource, config ->
 
@@ -116,9 +116,9 @@ private asDbAdmin(FlywayConfiguration config, Closure callback) {
         callback(new DriverDataSource(config?.classLoader ?: getClass().classLoader,
 
                                       // autodetected based on the URL if left empty
-                                      cfg('db.jdbcDriver', { cfg('flyway.driver') }),
+                                      cfg('db.driver', { cfg('flyway.driver') }),
 
-                                      cfg('db.jdbcServerUrl',
+                                      cfg('db.serverUrl',
                                           { "jdbc:${cfg('db.dialect')}://${cfg('db.host')}:${cfg('db.port')}" }),
 
                                       adminUsername, new String(adminPassword)), config)
@@ -271,25 +271,27 @@ private FlywayConfiguration loadFlywayConfig() {
 private String absolutePath(String parent = '', String child = '',
                             Closure<?> test = Files.&isRegularFile,
                             String basedir = cfg('basedir', { Paths.get('') as String })) {
-    parent = parent ?: ''
-    child = child ?: ''
-    test = test ?: Files.&isRegularFile
 
     def path = Paths.get(basedir, parent, child)
     if (test(path)) {
         return path.toAbsolutePath().normalize() as String
     }
-    path = Paths.get(basedir, cfg('build.outputDirectory', 'target/classes'), parent, child) // Maven?
+
+    final build = cfg('build') // Maven?
+
+    final outDir = build?.hasProperty('outputDirectory')?.getProperty(build) as String ?: 'target/classes'
+    path = Paths.get(basedir, outDir, parent, child)
     if (test(path)) {
         return path.toAbsolutePath().normalize() as String
     }
-    path = Paths.get(basedir, cfg('build.namespaceDirectory', { getClass().package.name.replace('.', '/') }),
-                     parent, child) // under package / namespace?
+
+    final pkgDir = cfg('project.build.package', { getClass().package?.name?.replace('.', '/') })
+    path = Paths.get(basedir, pkgDir, parent, child) // under package / namespace?
     if (test(path)) {
         return path.toAbsolutePath().normalize() as String
     }
-    path = Paths.get(basedir, cfg('build.outputDirectory', 'target/classes'),
-                     cfg('build.namespaceDirectory', { getClass().package.name.replace('.', '/') }), parent, child)
+
+    path = Paths.get(basedir, outDir, pkgDir, parent, child)
     if (test(path)) {
         return path.toAbsolutePath().normalize() as String
     }
@@ -306,8 +308,8 @@ private String cfg(String name, def defaultOrProvider = '') {
              project?.hasProperty(name)?.getProperty(project) ?:
              binding.variables[name]                          ?:
              getenv(name)                                     ?://@fmt:on
-             (defaultOrProvider && defaultOrProvider instanceof Closure ? defaultOrProvider.call() :
-              defaultOrProvider)) as String).trim()
+             (defaultOrProvider instanceof Closure ? defaultOrProvider.call() : defaultOrProvider) ?:
+             '') as String).trim()
 }
 
 private handle(Exception exception, def messageOrProvider = '') {
