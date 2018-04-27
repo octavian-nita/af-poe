@@ -24,7 +24,7 @@ import static org.flywaydb.core.internal.util.logging.console.ConsoleLog.Level.*
 final log = initFlywayLogging()
 
 final dbProps
-if ((dbProps = new File(cfg('ds.properties'))).isFile()) {
+if ((dbProps = new File(env('ds.properties'))).isFile()) {
 
     log.debug("Loading database connection, migrations, etc. properties from ${dbProps.absolutePath}...")
     dbProps.withInputStream {
@@ -36,12 +36,12 @@ if ((dbProps = new File(cfg('ds.properties'))).isFile()) {
 
 final operations = [:] as LinkedHashMap
 
-def dbOpt = cfg('db.drop')
+def dbOpt = env('db.drop')
 if (dbOpt) {
     operations['drop'] = dbOpt
 }
 
-dbOpt = cfg('db.create')
+dbOpt = env('db.create')
 if (dbOpt) {
     operations['create'] = dbOpt
 }
@@ -96,8 +96,8 @@ def drop(DataSource dataSource, FlywayConfiguration config, def dropOpt) {
 }
 
 private asDbAdmin(FlywayConfiguration config, Closure callback) {
-    String adminUsername = cfg('db.adminUsername')
-    char[] adminPassword = cfg('db.adminPassword').bytes
+    String adminUsername = env('db.adminUsername')
+    char[] adminPassword = env('db.adminPassword').bytes
 
     def console = console()
     if (console) {
@@ -116,10 +116,10 @@ private asDbAdmin(FlywayConfiguration config, Closure callback) {
         callback(new DriverDataSource(config?.classLoader ?: getClass().classLoader,
 
                                       // autodetected based on the URL if left empty
-                                      cfg('db.driver', { cfg('flyway.driver') }),
+                                      env('db.driver', { env('flyway.driver') }),
 
-                                      cfg('db.serverUrl',
-                                          { "jdbc:${cfg('db.dialect')}://${cfg('db.host')}:${cfg('db.port')}" }),
+                                      env('db.serverUrl',
+                                          { "jdbc:${env('db.dialect')}://${env('db.host')}:${env('db.port')}" }),
 
                                       adminUsername, new String(adminPassword)), config)
     } finally {
@@ -135,7 +135,7 @@ private executeSqlScripts(DataSource dataSource, FlywayConfiguration config, Str
     }
 
     final log = getLog(getClass())
-    final dry = YES.eq(cfg('db.dryRun'))
+    final dry = YES.eq(env('db.dryRun'))
 
     final sqlScriptSuffixes = []
     if (config?.sqlMigrationSuffixes) {
@@ -148,7 +148,7 @@ private executeSqlScripts(DataSource dataSource, FlywayConfiguration config, Str
         sqlScriptSuffixes.add('.sql')
     }
 
-    def dbDialect = cfg('db.dialect')
+    def dbDialect = env('db.dialect')
     if (dbDialect) {
         def colonIndex = dbDialect.indexOf(':')
         if (colonIndex > -1) {
@@ -193,7 +193,7 @@ private executeSqlScript(DataSource dataSource, FlywayConfiguration config, Stri
 
 private initFlywayLogging() {
     def level
-    switch (cfg('flyway.logLevel')) {
+    switch (env('flyway.logLevel')) {
     case ['X', '-X']:
         level = DEBUG
         break
@@ -211,25 +211,25 @@ private initFlywayLogging() {
 private FlywayConfiguration loadFlywayConfig() {
     final log = getLog(getClass())
     final config = [:]
-    final cfgEnc = cfg(CONFIG_FILE_ENCODING, 'UTF-8')
+    final cfgEnc = env(CONFIG_FILE_ENCODING, 'UTF-8')
     final loadOpt = ConfigUtils.&loadConfigurationFile.rcurry(cfgEnc, false)
     final loadMnd = ConfigUtils.&loadConfigurationFile.rcurry(cfgEnc, true)
 
     // Defaults:
     config.put(LOCATIONS,
-               cfg(LOCATIONS, { FILESYSTEM_PREFIX + absolutePath(cfg('db.dialect'), 'migration', Files.&isDirectory) }))
+               env(LOCATIONS, { FILESYSTEM_PREFIX + absolutePath(env('db.dialect'), 'migration', Files.&isDirectory) }))
 
     // Configuration files:
     config.putAll(loadOpt(new File(absolutePath('conf', CONFIG_FILE_NAME))))
     config.putAll(loadOpt(new File(properties['user.home'] as String, CONFIG_FILE_NAME)))
     config.putAll(loadOpt(new File(CONFIG_FILE_NAME)))
 
-    def configFiles = cfg(CONFIG_FILE)
+    def configFiles = env(CONFIG_FILE)
     if (configFiles) {
         log.warn('configFile is deprecated and will be removed in Flyway 6.0. Use configFiles instead.')
         config.putAll(loadMnd(new File(configFiles)))
     }
-    configFiles = cfg(CONFIG_FILES)
+    configFiles = env(CONFIG_FILES)
     if (configFiles) {
         for (String configFile : StringUtils.tokenizeToStringArray(configFiles, ',')) {
             config.putAll(loadMnd(new File(configFile)))
@@ -241,7 +241,7 @@ private FlywayConfiguration loadFlywayConfig() {
         final mod = field.modifiers
         if (String.class == field.type && isPublic(mod) && isStatic(mod) && isFinal(mod)) {
             def key = field.get(null) as String
-            def val = cfg(key, '')
+            def val = env(key, '')
             if (val) {
                 config.put(key, val)
             }
@@ -270,14 +270,14 @@ private FlywayConfiguration loadFlywayConfig() {
 
 private String absolutePath(String parent = '', String child = '',
                             Closure<?> test = Files.&isRegularFile,
-                            String basedir = cfg('basedir', { Paths.get('') as String })) {
+                            String basedir = env('basedir', { Paths.get('') as String })) {
 
     def path = Paths.get(basedir, parent, child)
     if (test(path)) {
         return path.toAbsolutePath().normalize() as String
     }
 
-    final build = cfg('build') // Maven?
+    final build = env('build') // Maven?
 
     final outDir = build?.hasProperty('outputDirectory')?.getProperty(build) as String ?: 'target/classes'
     path = Paths.get(basedir, outDir, parent, child)
@@ -285,7 +285,7 @@ private String absolutePath(String parent = '', String child = '',
         return path.toAbsolutePath().normalize() as String
     }
 
-    final pkgDir = cfg('project.build.package', { getClass().package?.name?.replace('.', '/') })
+    final pkgDir = env('project.build.package', { getClass().package?.name?.replace('.', '/') })
     path = Paths.get(basedir, pkgDir, parent, child) // under package / namespace?
     if (test(path)) {
         return path.toAbsolutePath().normalize() as String
@@ -299,7 +299,7 @@ private String absolutePath(String parent = '', String child = '',
     return Paths.get(basedir, parent, child).toAbsolutePath().normalize() as String
 }
 
-private String cfg(String name, def defaultOrProvider = '') {
+private String env(String name, def defaultOrProvider = '') {
     // Maven / Gradle project passed in bindings?
     final project = binding.variables.project
 
