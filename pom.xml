@@ -4,126 +4,27 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
-  <!-- ========================================= -->
-  <!-- Parent POM for Maven-based af-poe modules -->
-  <!-- ========================================= -->
+  <!-- ==================================================================================================== -->
+  <!-- Parent POM for Maven-based af-poe modules (element order based on https://maven.apache.org/pom.html) -->
+  <!-- ==================================================================================================== -->
 
   <groupId>net.appfold</groupId>
   <artifactId>af-poe</artifactId>
   <version>1.0.0-SNAPSHOT</version>
   <packaging>pom</packaging>
 
-  <name>af-poe</name>
-  <url>https://github.com/octavian-nita/af-poe</url>
-  <description>af-poe: AppFold PersOnal Expense journal / spending log</description>
-
-  <developers>
-    <developer>
-      <id>octavian-nita</id>
-      <name>Octavian Nita</name>
-      <email>octavian.nita@gmail.com</email>
-      <url>https://github.com/octavian-nita</url>
-      <roles>
-        <role>architect</role>
-        <role>developer</role>
-      </roles>
-      <timezone>+1</timezone>
-    </developer>
-  </developers>
-
-  <issueManagement>
-    <url>https://github.com/octavian-nita/af-poe/issues</url>
-    <system>af-poe Issues on GitHub</system>
-  </issueManagement>
-
-  <scm>
-    <url>https://github.com/octavian-nita/af-poe</url>
-    <connection>scm:git:git://github.com/octavian-nita/af-poe.git</connection>
-    <developerConnection>scm:git:git@github.com:octavian-nita/af-poe.git</developerConnection>
-  </scm>
-
-  <modules>
-    <!--module>af-crypto</module-->
-    <module>database</module>
-  </modules>
-
-  <properties>
-    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <project.build.resourceDirectory>src/main/resources</project.build.resourceDirectory>
-
-    <!-- ============== -->
-    <!-- Versions (BOM) -->
-    <!-- ============== -->
-
-    <version.java>1.8</version.java>
-
-    <version.junit.jupiter>5.2.0</version.junit.jupiter>
-    <version.junit.platform>1.2.0</version.junit.platform>
-    <version.mockito>2.18.3</version.mockito>
-
-    <version.slf4j>1.7.25</version.slf4j>
-    <version.logback>1.2.3</version.logback>
-
-    <version.commons.lang>3.7</version.commons.lang>
-    <version.snakeyaml>1.21</version.snakeyaml>
-    <version.jmustache>1.14</version.jmustache>
-
-    <version.mariadb.client>2.2.3</version.mariadb.client>
-
-    <version.flyway>5.0.7</version.flyway>
-    <version.groovy>2.4.15</version.groovy>
-  </properties>
-
-  <build>
-    <pluginManagement>
-      <plugins>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-resources-plugin</artifactId>
-          <version>3.0.2</version>
-          <configuration>
-            <resources>
-              <resource>
-                <directory>${project.build.resourceDirectory}</directory>
-                <filtering>true</filtering>
-              </resource>
-            </resources>
-          </configuration>
-        </plugin>
-
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-compiler-plugin</artifactId>
-          <version>3.7.0</version>
-          <configuration>
-            <source>${version.java}</source>
-            <target>${version.java}</target>
-          </configuration>
-        </plugin>
-
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-surefire-plugin</artifactId>
-          <version>2.21.0</version>
-          <dependencies>
-            <dependency>
-              <groupId>org.junit.platform</groupId>
-              <artifactId>junit-platform-surefire-provider</artifactId>
-              <version>${version.junit.platform}</version>
-            </dependency>
-          </dependencies>
-        </plugin>
-      </plugins>
-    </pluginManagement>
-  </build>
-
   <dependencyManagement>
-
-    <!-- ======= -->
-    <!-- Testing -->
-    <!-- ======= -->
-
     <dependencies>
+      <dependency>
+        <groupId>javax.validation</groupId>
+        <artifactId>validation-api</artifactId>
+        <version>${version.validation.api}</version>
+      </dependency>
+
+      <!-- ======= -->
+      <!-- Testing -->
+      <!-- ======= -->
+
       <dependency>
         <groupId>org.junit.jupiter</groupId>
         <artifactId>junit-jupiter-engine</artifactId>
@@ -203,4 +104,109 @@
       </dependency>
     </dependencies>
   </dependencyManagement>
+
+  <modules>
+    <module>af-crypto</module>
+    <module>database</module>
+  </modules>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.build.resourceDirectory>src/main/resources</project.build.resourceDirectory>
+
+    <!-- ============== -->
+    <!-- Versions (BOM) -->
+    <!-- ============== -->
+
+    <version.java>1.8</version.java>
+    <version.validation.api>2.0.1.Final</version.validation.api>
+
+    <version.junit.jupiter>5.2.0</version.junit.jupiter>
+    <version.junit.platform>1.2.0</version.junit.platform>
+    <version.mockito>2.18.3</version.mockito>
+
+    <version.slf4j>1.7.25</version.slf4j>
+    <version.logback>1.2.3</version.logback>
+
+    <version.commons.lang>3.7</version.commons.lang>
+    <version.snakeyaml>1.21</version.snakeyaml>
+    <version.jmustache>1.14</version.jmustache>
+
+    <version.mariadb.client>2.2.3</version.mariadb.client>
+
+    <version.flyway>5.0.7</version.flyway>
+    <version.groovy>2.4.15</version.groovy>
+  </properties>
+
+  <build>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-resources-plugin</artifactId>
+          <version>3.0.2</version>
+          <configuration>
+            <resources>
+              <resource>
+                <directory>${project.build.resourceDirectory}</directory>
+                <filtering>true</filtering>
+              </resource>
+            </resources>
+          </configuration>
+        </plugin>
+
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-compiler-plugin</artifactId>
+          <version>3.7.0</version>
+          <configuration>
+            <source>${version.java}</source>
+            <target>${version.java}</target>
+          </configuration>
+        </plugin>
+
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <version>2.21.0</version>
+          <dependencies>
+            <dependency>
+              <groupId>org.junit.platform</groupId>
+              <artifactId>junit-platform-surefire-provider</artifactId>
+              <version>${version.junit.platform}</version>
+            </dependency>
+          </dependencies>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+  </build>
+
+  <name>af-poe</name>
+  <url>https://github.com/octavian-nita/af-poe</url>
+  <description>af-poe: AppFold PersOnal Expense journal / spending log</description>
+
+  <developers>
+    <developer>
+      <id>octavian-nita</id>
+      <name>Octavian Nita</name>
+      <email>octavian.nita@gmail.com</email>
+      <url>https://github.com/octavian-nita</url>
+      <roles>
+        <role>architect</role>
+        <role>developer</role>
+      </roles>
+      <timezone>+1</timezone>
+    </developer>
+  </developers>
+
+  <issueManagement>
+    <url>https://github.com/octavian-nita/af-poe/issues</url>
+    <system>af-poe Issues on GitHub</system>
+  </issueManagement>
+
+  <scm>
+    <url>https://github.com/octavian-nita/af-poe</url>
+    <connection>scm:git:git://github.com/octavian-nita/af-poe.git</connection>
+    <developerConnection>scm:git:git@github.com:octavian-nita/af-poe.git</developerConnection>
+  </scm>
 </project>

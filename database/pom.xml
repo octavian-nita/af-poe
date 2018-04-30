@@ -4,18 +4,30 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
+  <artifactId>poe-database</artifactId>
+  <version>1.0.0-SNAPSHOT</version>
+  <packaging>jar</packaging>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.mariadb.jdbc</groupId>
+      <artifactId>mariadb-java-client</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.flywaydb</groupId>
+      <artifactId>flyway-core</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.codehaus.groovy</groupId>
+      <artifactId>groovy-all</artifactId>
+    </dependency>
+  </dependencies>
+
   <parent>
     <groupId>net.appfold</groupId>
     <artifactId>af-poe</artifactId>
     <version>1.0.0-SNAPSHOT</version>
   </parent>
-  <artifactId>poe-database</artifactId>
-  <version>1.0.0-SNAPSHOT</version>
-  <packaging>jar</packaging>
-
-  <name>poe-database</name>
-  <url>https://github.com/octavian-nita/af-poe/tree/master/database</url>
-  <description>af-poe: An SQL Database Model</description>
 
   <properties>
     <project.build.package>net/appfold/poe/db</project.build.package>
@@ -103,18 +115,7 @@
     </plugins>
   </build>
 
-  <dependencies>
-    <dependency>
-      <groupId>org.mariadb.jdbc</groupId>
-      <artifactId>mariadb-java-client</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.flywaydb</groupId>
-      <artifactId>flyway-core</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.codehaus.groovy</groupId>
-      <artifactId>groovy-all</artifactId>
-    </dependency>
-  </dependencies>
+  <name>poe-database</name>
+  <url>https://github.com/octavian-nita/af-poe/tree/master/database</url>
+  <description>af-poe: An SQL Database Model</description>
 </project>
