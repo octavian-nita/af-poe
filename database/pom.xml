@@ -58,22 +58,23 @@
         <version>1.6</version>
         <executions>
           <execution>
+            <id>dbctl-on-install</id>
             <phase>install</phase>
             <goals>
               <goal>execute</goal>
             </goals>
-            <configuration>
-              <properties>
-                <ds.properties>
-                  ${project.build.outputDirectory}/${project.build.package}/${db.dialect}/ds.properties
-                </ds.properties>
-              </properties>
-              <scripts>
-                <script>file:///${project.basedir}/dbctl.groovy</script>
-              </scripts>
-            </configuration>
           </execution>
         </executions>
+        <configuration>
+          <properties>
+            <ds.properties>
+              ${project.build.outputDirectory}/${project.build.package}/${db.dialect}/ds.properties
+            </ds.properties>
+          </properties>
+          <scripts>
+            <script>file:///${project.basedir}/dbctl.groovy</script>
+          </scripts>
+        </configuration>
       </plugin>
 
       <plugin>
