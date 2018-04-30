@@ -26,10 +26,11 @@ public interface AuthenticatedCipher {
 
     default byte[] encrypt(byte[] key, byte[] data, Serializable... associatedData) throws CryptoException {
         try (final ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-             final ObjectOutputStream asdt = new ObjectOutputStream(bytes)) {
+             final ObjectOutputStream assoc = new ObjectOutputStream(bytes)) {
 
-            asdt.writeObject(associatedData);
-            asdt.flush();
+            assoc.writeObject(associatedData);
+            assoc.flush();
+
             return encrypt(key, data, bytes.toByteArray());
 
         } catch (IOException ioe) {
