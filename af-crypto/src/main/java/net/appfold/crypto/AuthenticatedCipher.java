@@ -4,7 +4,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
-import java.time.ZonedDateTime;
+
+import static java.time.ZonedDateTime.now;
 
 /**
  * Largely inspired by / adapted from <a href="https://github.com/patrickfav/armadillo">Armadillo</a>'s
@@ -21,14 +22,14 @@ public interface AuthenticatedCipher {
 
     byte[] encrypt(byte[] key, byte[] data, byte[] associatedData) throws CryptoException;
 
-    default byte[] encrypt(byte[] key, byte[] data) throws CryptoException { return encrypt(key, data, null); }
+    default byte[] encrypt(byte[] key, byte[] data) throws CryptoException { return encrypt(key, data, (byte[]) null); }
 
-    default byte[] encrypt(byte[] key, byte[] data, Serializable associatedData) throws CryptoException {
+    default byte[] encrypt(byte[] key, byte[] data, Serializable... associatedData) throws CryptoException {
         try (final ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-             final ObjectOutputStream stream = new ObjectOutputStream(bytes)) {
+             final ObjectOutputStream asdt = new ObjectOutputStream(bytes)) {
 
-            stream.writeObject(associatedData);
-            stream.flush();
+            asdt.writeObject(associatedData);
+            asdt.flush();
             return encrypt(key, data, bytes.toByteArray());
 
         } catch (IOException ioe) {
@@ -37,10 +38,10 @@ public interface AuthenticatedCipher {
     }
 
     default byte[] encryptWithTimestamp(byte[] key, byte[] data) throws CryptoException {
-        return encrypt(key, data, ZonedDateTime.now());
+        return encrypt(key, data, now());
     }
 
     byte[] decrypt(byte[] key, byte[] data, byte[] associatedData) throws CryptoException;
 
-    default byte[] decrypt(byte[] key, byte[] data) throws CryptoException { return encrypt(key, data, null); }
+    default byte[] decrypt(byte[] key, byte[] data) throws CryptoException { return decrypt(key, data, null); }
 }
