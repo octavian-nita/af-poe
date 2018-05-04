@@ -1,9 +1,12 @@
 package net.appfold.crypto;
 
+import javax.validation.constraints.NotNull;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
+import java.security.Provider;
+import java.security.SecureRandom;
 
 /**
  * Largely inspired by / adapted from <a href="https://github.com/patrickfav/armadillo">Armadillo</a>'s
@@ -27,13 +30,14 @@ public interface AuthenticatedCipher {
      * @return encrypted content (ciphertext)
      * @throws CryptoException if encryption fails in any way
      */
-    byte[] encrypt(byte[] key, byte[] plaintext, byte[] associatedData) throws CryptoException;
+    byte[] encrypt(@NotNull byte[] key, @NotNull byte[] plaintext, byte[] associatedData) throws CryptoException;
 
     /**
      * Equivalent to {@link ObjectOutputStream#writeObject(Object) serializing} all {@code associatedData} items and
      * invoking {@link #encrypt(byte[], byte[], byte[]) encrypt(key, plaintext, serialized)}.
      */
-    default byte[] encrypt(byte[] key, byte[] plaintext, Serializable... associatedData) throws CryptoException {
+    default byte[] encrypt(@NotNull byte[] key, @NotNull byte[] plaintext, Serializable... associatedData)
+        throws CryptoException {
         try (final ByteArrayOutputStream bytes = new ByteArrayOutputStream();
              final ObjectOutputStream assoc = new ObjectOutputStream(bytes)) {
 
@@ -50,7 +54,7 @@ public interface AuthenticatedCipher {
     /**
      * Equivalent to invoking {@link #encrypt(byte[], byte[], byte[]) encrypt(key, plaintext, (byte[]) null)}.
      */
-    default byte[] encrypt(byte[] key, byte[] plaintext) throws CryptoException {
+    default byte[] encrypt(@NotNull byte[] key, @NotNull byte[] plaintext) throws CryptoException {
         return encrypt(key, plaintext, (byte[]) null);
     }
 
@@ -62,13 +66,14 @@ public interface AuthenticatedCipher {
      * @return decrypted, original information (plaintext)
      * @throws CryptoException if any of the decryption or authentication or integrity checks fail
      */
-    byte[] decrypt(byte[] key, byte[] ciphertext, byte[] associatedData) throws CryptoException;
+    byte[] decrypt(@NotNull byte[] key, @NotNull byte[] ciphertext, byte[] associatedData) throws CryptoException;
 
     /**
      * Equivalent to {@link ObjectOutputStream#writeObject(Object) serializing} all {@code associatedData} items and
      * invoking {@link #decrypt(byte[], byte[], byte[]) decrypt(key, ciphertext, serialized)}.
      */
-    default byte[] decrypt(byte[] key, byte[] ciphertext, Serializable... associatedData) throws CryptoException {
+    default byte[] decrypt(@NotNull byte[] key, @NotNull byte[] ciphertext, Serializable... associatedData)
+        throws CryptoException {
         try (final ByteArrayOutputStream bytes = new ByteArrayOutputStream();
              final ObjectOutputStream assoc = new ObjectOutputStream(bytes)) {
 
@@ -85,7 +90,11 @@ public interface AuthenticatedCipher {
     /**
      * Equivalent to invoking {@link #decrypt(byte[], byte[], byte[]) decrypt(key, ciphertext, (byte[]) null)}.
      */
-    default byte[] decrypt(byte[] key, byte[] ciphertext) throws CryptoException {
+    default byte[] decrypt(@NotNull byte[] key, @NotNull byte[] ciphertext) throws CryptoException {
         return decrypt(key, ciphertext, (byte[]) null);
     }
+
+    static AuthenticatedCipher cipher() { return new ArmadilloCipher(); }
+
+    static AuthenticatedCipher cipher(Provider provider) { return new ArmadilloCipher(new SecureRandom(), provider); }
 }
