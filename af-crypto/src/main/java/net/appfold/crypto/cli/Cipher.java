@@ -1,4 +1,4 @@
-package net.appfold.crypto.tool;
+package net.appfold.crypto.cli;
 
 import java.io.BufferedReader;
 import java.io.Console;
@@ -8,18 +8,18 @@ import java.net.Authenticator;
 import java.net.PasswordAuthentication;
 import java.net.URL;
 import java.util.Locale;
-import java.util.logging.Logger;
 
 import static java.lang.System.getProperty;
 import static java.lang.System.setProperty;
 import static java.util.Locale.US;
 
 /**
- * Simple <a href="https://en.wikipedia.org/wiki/Command-line_interface">CLI</a> to encrypt / decrypt information at the
- * {@link Console}.
+ * Simple <a href="https://en.wikipedia.org/wiki/Command-line_interface">CLI</a> to encrypt / decrypt information from
+ * the {@link Console character-based console device, if any, associated with the current Java virtual machine}.
  *
  * @author Octavian Theodor NITA (https://github.com/octavian-nita/)
  * @version 1.0, 2018/05/02
+ * @see <a href="https://docs.oracle.com/javase/8/docs/technotes/guides/net/proxies.html">Java Networking and Proxies</a>
  */
 public class Cipher {
 
@@ -32,13 +32,13 @@ public class Cipher {
             @Override
             protected PasswordAuthentication getPasswordAuthentication() {
                 String protocol = getRequestingProtocol();
-                protocol = protocol == null ? "http" : protocol.toLowerCase();
+                if (protocol == null) {
+                    return super.getPasswordAuthentication();
+                }
 
-                Logger.getGlobal().info("Requesting protocol: " + protocol);
-
-                int versionPos = protocol.indexOf('/');
-                if (versionPos >= 0) {
-                    protocol = protocol.substring(0, versionPos);
+                int protoVerPos = protocol.indexOf('/');
+                if (protoVerPos >= 0) {
+                    protocol = protocol.substring(0, protoVerPos);
                 }
 
                 return new PasswordAuthentication(getProperty(protocol + ".proxyUser"),
@@ -46,7 +46,7 @@ public class Cipher {
             }
         });
 
-        try (final InputStream is = new URL("https://google.be").openStream();
+        try (final InputStream is = new URL("https://google.ro").openStream();
              final BufferedReader rd = new BufferedReader(new InputStreamReader(is))) {
             rd.lines().forEach(System.out::println);
         }
