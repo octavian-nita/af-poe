@@ -34,9 +34,9 @@ public class Cipher {
                 String protocol = getRequestingProtocol();
                 if (protocol == null) {
                     return super.getPasswordAuthentication();
-                } else {
-                    protocol = protocol.toLowerCase();
                 }
+
+                protocol = protocol.toLowerCase();
 
                 int protoVerPos = protocol.indexOf('/');
                 if (protoVerPos >= 0) {
