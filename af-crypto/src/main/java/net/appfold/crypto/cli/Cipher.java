@@ -1,17 +1,9 @@
 package net.appfold.crypto.cli;
 
-import java.io.BufferedReader;
-import java.io.Console;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.net.Authenticator;
-import java.net.PasswordAuthentication;
-import java.net.URL;
-import java.util.Locale;
+import joptsimple.OptionParser;
+import joptsimple.OptionSet;
 
-import static java.lang.System.getProperty;
-import static java.lang.System.setProperty;
-import static java.util.Locale.US;
+import java.io.Console;
 
 /**
  * Simple <a href="https://en.wikipedia.org/wiki/Command-line_interface">CLI</a> to encrypt / decrypt information from
@@ -19,38 +11,17 @@ import static java.util.Locale.US;
  *
  * @author Octavian Theodor NITA (https://github.com/octavian-nita/)
  * @version 1.0, 2018/05/02
- * @see <a href="https://docs.oracle.com/javase/8/docs/technotes/guides/net/proxies.html">Java Networking and Proxies</a>
  */
 public class Cipher {
 
-    public static void main(String[] args) throws Exception {
-        Locale.setDefault(US);
-        setProperty("java.util.logging.SimpleFormatter.format", "%1$tY/%1$tm/%1$td %4$s %5$s%6$s%n");
+    public static void main(String[] args) {
+        final OptionParser optsParser = new OptionParser();
 
-        Authenticator.setDefault(new Authenticator() {
+        optsParser.accepts("key", "encryption key to use").withRequiredArg();
+        optsParser.accepts("help", "display usage information").forHelp();
 
-            @Override
-            protected PasswordAuthentication getPasswordAuthentication() {
-                String protocol = getRequestingProtocol();
-                if (protocol == null) {
-                    return super.getPasswordAuthentication();
-                }
+        final OptionSet opts = optsParser.parse("--help"/*, "-k", "bobo"*/);
 
-                protocol = protocol.toLowerCase();
-
-                int protoVerPos = protocol.indexOf('/');
-                if (protoVerPos >= 0) {
-                    protocol = protocol.substring(0, protoVerPos);
-                }
-
-                return new PasswordAuthentication(getProperty(protocol + ".proxyUser"),
-                                                  getProperty(protocol + ".proxyPassword", "").toCharArray());
-            }
-        });
-
-        try (final InputStream is = new URL("https://google.ro").openStream();
-             final BufferedReader rd = new BufferedReader(new InputStreamReader(is))) {
-            rd.lines().forEach(System.out::println);
-        }
+        System.out.println(opts.asMap());
     }
 }

@@ -34,7 +34,7 @@
       <dependency>
         <groupId>org.mockito</groupId>
         <artifactId>mockito-core</artifactId>
-        <version>${version.mockito}</version>
+        <version>${version.mockito.core}</version>
         <scope>test</scope>
       </dependency>
 
@@ -45,17 +45,17 @@
       <dependency>
         <groupId>org.slf4j</groupId>
         <artifactId>slf4j-api</artifactId>
-        <version>${version.slf4j}</version>
+        <version>${version.slf4j.api}</version>
       </dependency>
       <dependency>
         <groupId>org.slf4j</groupId>
         <artifactId>jul-to-slf4j</artifactId>
-        <version>${version.slf4j}</version>
+        <version>${version.slf4j.api}</version>
       </dependency>
       <dependency>
         <groupId>ch.qos.logback</groupId>
         <artifactId>logback-classic</artifactId>
-        <version>${version.logback}</version>
+        <version>${version.logback.classic}</version>
       </dependency>
 
       <!-- ==================== -->
@@ -85,7 +85,7 @@
       <dependency>
         <groupId>org.mariadb.jdbc</groupId>
         <artifactId>mariadb-java-client</artifactId>
-        <version>${version.mariadb.client}</version>
+        <version>${version.mariadb.java.client}</version>
       </dependency>
 
       <!-- ===== -->
@@ -93,14 +93,19 @@
       <!-- ===== -->
 
       <dependency>
+        <groupId>net.sf.jopt-simple</groupId>
+        <artifactId>jopt-simple</artifactId>
+        <version>${version.jopt.simple}</version>
+      </dependency>
+      <dependency>
         <groupId>org.flywaydb</groupId>
         <artifactId>flyway-core</artifactId>
-        <version>${version.flyway}</version>
+        <version>${version.flyway.core}</version>
       </dependency>
       <dependency>
         <groupId>org.codehaus.groovy</groupId>
         <artifactId>groovy-all</artifactId>
-        <version>${version.groovy}</version>
+        <version>${version.groovy.all}</version>
       </dependency>
     </dependencies>
   </dependencyManagement>
@@ -123,19 +128,20 @@
 
     <version.junit.jupiter>5.2.0</version.junit.jupiter>
     <version.junit.platform>1.2.0</version.junit.platform>
-    <version.mockito>2.18.3</version.mockito>
+    <version.mockito.core>2.18.3</version.mockito.core>
 
-    <version.slf4j>1.7.25</version.slf4j>
-    <version.logback>1.2.3</version.logback>
+    <version.slf4j.api>1.7.25</version.slf4j.api>
+    <version.logback.classic>1.2.3</version.logback.classic>
 
     <version.commons.lang>3.7</version.commons.lang>
     <version.snakeyaml>1.21</version.snakeyaml>
     <version.jmustache>1.14</version.jmustache>
 
-    <version.mariadb.client>2.2.3</version.mariadb.client>
+    <version.mariadb.java.client>2.2.3</version.mariadb.java.client>
 
-    <version.flyway>5.0.7</version.flyway>
-    <version.groovy>2.4.15</version.groovy>
+    <version.jopt.simple>5.0.4</version.jopt.simple>
+    <version.flyway.core>5.0.7</version.flyway.core>
+    <version.groovy.all>2.4.15</version.groovy.all>
   </properties>
 
   <build>
