@@ -8,7 +8,9 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 
 import static java.lang.System.*;
-import static org.apache.commons.cli.HelpFormatter.*;
+import static java.util.Arrays.asList;
+import static org.apache.commons.cli.HelpFormatter.DEFAULT_DESC_PAD;
+import static org.apache.commons.cli.HelpFormatter.DEFAULT_LEFT_PAD;
 import static org.apache.commons.cli.Option.builder;
 
 /**
@@ -20,58 +22,95 @@ import static org.apache.commons.cli.Option.builder;
  */
 public class Cipher {
 
+    private final String usage;
+
     private final Options options = new Options();
 
     public Cipher() {
-        final OptionGroup encryptDecryptOpt = new OptionGroup();
-        encryptDecryptOpt //@fmt:off
-            .addOption(builder("p").longOpt("plain").desc("the information to encrypt (i.e. assume encrypt mode); " +
-                                                          "if argument not provided, prompt the user")
-                                   .hasArg().optionalArg(true).argName("plaintext").build())
-            .addOption(builder("c").longOpt("cipher").desc("the information to decrypt (i.e. assume decrypt mode); " +
-                                                           "if argument not provided, prompt the user")
-                                   .hasArg().optionalArg(true).argName("ciphertext").build()); //@fmt:on
-
         options //@fmt:off
-            .addOption(builder("h").longOpt("help").desc("display usage and exit")
-                                   .hasArg(false).build())
-            .addOption(builder("k").longOpt("key").desc("the key to use; " +
-                                                        "if the argument is not provided, prompt the user for the key")
-                                   .hasArg().optionalArg(true).argName("secret-key").build())
-            .addOptionGroup(encryptDecryptOpt)
-            .addOption(builder("a").longOpt("associated-data").desc("associated data for authentication; " +
-                                                                    "if option present, the argument is required")
-                                   .hasArg().optionalArg(false).argName("data").build()); //@fmt:on
-    }
+            .addOption(builder("k")
+                           .longOpt("key")
+                           .hasArg().optionalArg(true).argName("master-key")
+                           .desc("the master key to use; " +
+                                 "if no argument is provided (recommended!), prompt the user")
+                           .build())
+            .addOptionGroup(new OptionGroup()
+                                .addOption(builder("p")
+                                               .longOpt("plain")
+                                               .hasArg().optionalArg(true).argName("plaintext")
+                                               .desc("the information to encrypt (i.e. assume encrypt mode); " +
+                                                     "if no argument is provided (recommended!), prompt the user")
+                                               .build())
+                                .addOption(builder("c")
+                                               .longOpt("cipher")
+                                               .hasArg().optionalArg(true).argName("ciphertext")
+                                               .desc("the information to decrypt (i.e. assume decrypt mode); " +
+                                                     "if no argument is provided, prompt the user")
+                                               .build()))
+            .addOption(builder("a")
+                           .longOpt("associated-data")
+                           .hasArg().optionalArg(false).argName("data")
+                           .desc("associated data to be used for authentication; " +
+                                 "if present, the argument is required; " +
+                                 "multiple occurrences are allowed")
+                           .build())
+            .addOption(builder("e")
+                           .longOpt("echo")
+                           .desc("echo the user input when prompting for master key or plaintext")
+                           .build())
+            .addOption(builder("h")
+                           .longOpt("help")
+                           .desc("display usage message and exit")
+                           .build()); //@fmt:on
 
-    public String usage() {
+        // Cache the usage message:
         final StringWriter usage = new StringWriter();
 
         final String nl = getProperty("line.separator", "\n");
-        final HelpFormatter help = new HelpFormatter();
-        help.setOptionComparator(null);
-        help.setSyntaxPrefix("Usage: ");
-        help.printHelp(new PrintWriter(usage), DEFAULT_WIDTH, "java -cp ... " + Cipher.class.getName(), nl + //@fmt:off
-                       "Encrypts plaintext (-p) or decrypts ciphertext (-c) employing a" + nl +
-                       "user-provided master key (-k). Uses authenticated encryption if" + nl +
-                       "additional data (-a) is provided." +
-                       nl + nl, options, //@fmt:on
-                       DEFAULT_LEFT_PAD, DEFAULT_DESC_PAD,
-                       nl + "If neither -p not -c are provided, -p (i.e. encrypt mode) is assumed.", true);
+        final HelpFormatter fmt = new HelpFormatter();
+        fmt.setOptionComparator(null); // keep definition order for options
+        fmt.setSyntaxPrefix("Usage: ");
+        fmt.printHelp(new PrintWriter(usage), 72, "java [-options] " + Cipher.class.getName(), nl + //@fmt:off
+                      "Encrypts plaintext (-p) or decrypts ciphertext (-c) employing a"      + nl +
+                      "user-provided master key (-k). If neither -p nor -c are provided"     + nl +
+                      "-p (i.e. encrypt mode) is assumed. Uses authenticated encryption"     + nl +
+                      "if additional data (-a) is specified."                                + nl + nl, //@fmt:on
+                      options, DEFAULT_LEFT_PAD, DEFAULT_DESC_PAD, null, true);
 
-        return usage.toString();
+        this.usage = usage.toString();
     }
 
+    public String usage() { return usage; }
+
+    @Override
+    public String toString() { return usage(); }
+
+    protected void validate(CommandLine commandLine) throws ParseException {
+        if (commandLine == null) {
+            return;
+        }
+
+        for (String opt : asList("k", "p", "c")) {
+            final String[] val = commandLine.getOptionValues(opt);
+            if (val != null && val.length > 1) {
+                throw new ParseException("The option '" + opt + "' can only be specified once");
+            }
+        }
+    }
+
+    /** @return an array of length 0 if the <em>help</em> option was provided */
     @NotNull
     public char[] run(String... args) throws ParseException {
         final CommandLine commandLine = new DefaultParser().parse(options, args);
 
         if (commandLine.hasOption("h")) {
             out.printf("%n%s%n", usage());
-            return new char[]{0};
+            return new char[]{};
         }
 
-        return new char[]{0};
+        validate(commandLine); // multiple arguments, etc.
+
+        return new char[]{};
     }
 
     public static void main(String[] args) {
@@ -80,8 +119,8 @@ public class Cipher {
             final char[] result = cipher.run(args);
             if (result.length > 0) {
                 out.println(new String(result));
+                out.println();
             }
-            out.println();
         } catch (ParseException e) {
             err.printf("%n%s%n%n%s%n", e.getMessage(), cipher.usage());
             exit(1);
