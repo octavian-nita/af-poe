@@ -1,5 +1,6 @@
 package net.appfold.crypto.cli;
 
+import net.appfold.crypto.CryptoException;
 import org.apache.commons.cli.*;
 
 import javax.validation.constraints.NotNull;
@@ -80,12 +81,43 @@ public class Cipher {
         this.usage = usage.toString();
     }
 
+    public static void main(String[] args) {
+        final Cipher cipher = new Cipher();
+        try {
+            final char[] result = cipher.run(args);
+            if (result.length > 0) {
+                out.println(new String(result));
+                out.println();
+            }
+        } catch (ParseException | CryptoException e) {
+            err.printf("%n%s%n%n%s%n", e.getMessage(), cipher.usage());
+            exit(1);
+        }
+    }
+
     public String usage() { return usage; }
 
     @Override
     public String toString() { return usage(); }
 
-    protected void validate(CommandLine commandLine) throws ParseException {
+    /** @return an array of length 0 if the <em>help</em> option was provided */
+    @NotNull
+    public char[] run(String... args) throws ParseException, CryptoException {
+        final CommandLine commandLine = new DefaultParser().parse(options, args);
+
+        if (commandLine.hasOption("h")) {
+            out.printf("%n%s%n", usage());
+            return new char[]{};
+        }
+
+        validate(commandLine); // multiple arguments, etc.
+
+        char[] key = getKey(commandLine);
+
+        return new char[]{};
+    }
+
+    private void validate(CommandLine commandLine) throws ParseException {
         if (commandLine == null) {
             return;
         }
@@ -98,32 +130,21 @@ public class Cipher {
         }
     }
 
-    /** @return an array of length 0 if the <em>help</em> option was provided */
-    @NotNull
-    public char[] run(String... args) throws ParseException {
-        final CommandLine commandLine = new DefaultParser().parse(options, args);
-
-        if (commandLine.hasOption("h")) {
-            out.printf("%n%s%n", usage());
-            return new char[]{};
+    private char[] getKey(CommandLine commandLine) {
+        if (commandLine == null) {
+            return null;
         }
 
-        validate(commandLine); // multiple arguments, etc.
+        if (!commandLine.hasOption('k')) {
+            // generate random
+        } else {
+            if (commandLine.getOptionValue('k') == null) {
+                // read from console
+            } else {
+                // return char array
+            }
+        }
 
         return new char[]{};
-    }
-
-    public static void main(String[] args) {
-        final Cipher cipher = new Cipher();
-        try {
-            final char[] result = cipher.run(args);
-            if (result.length > 0) {
-                out.println(new String(result));
-                out.println();
-            }
-        } catch (ParseException e) {
-            err.printf("%n%s%n%n%s%n", e.getMessage(), cipher.usage());
-            exit(1);
-        }
     }
 }
