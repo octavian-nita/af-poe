@@ -7,6 +7,8 @@ import javax.validation.constraints.NotNull;
 import java.io.Console;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.math.BigInteger;
+import java.security.SecureRandom;
 
 import static java.lang.System.*;
 import static java.util.Arrays.asList;
@@ -136,12 +138,17 @@ public class Cipher {
         }
 
         if (!commandLine.hasOption('k')) {
-            // generate random
+
+            final byte[] key = new byte[128];
+            new SecureRandom().nextBytes(key);
+            System.out.println(new BigInteger(1, key).toString(16));
+
+            System.out.println("Generate random key");
         } else {
             if (commandLine.getOptionValue('k') == null) {
-                // read from console
+                System.out.println("Read key from console");
             } else {
-                // return char array
+                System.out.println("Get char array");
             }
         }
 
