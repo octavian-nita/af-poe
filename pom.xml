@@ -82,6 +82,11 @@
         <artifactId>jmustache</artifactId>
         <version>${version.jmustache}</version>
       </dependency>
+      <dependency>
+        <groupId>de.svenkubiak</groupId>
+        <artifactId>jBCrypt</artifactId>
+        <version>${version.jbcrypt}</version>
+      </dependency>
 
       <!-- ============ -->
       <!-- JDBC Drivers -->
@@ -137,6 +142,7 @@
     <version.commons.cli>1.4</version.commons.cli>
     <version.snakeyaml>1.21</version.snakeyaml>
     <version.jmustache>1.14</version.jmustache>
+    <version.jbcrypt>0.4.1</version.jbcrypt>
 
     <version.mariadb.java.client>2.2.3</version.mariadb.java.client>
 

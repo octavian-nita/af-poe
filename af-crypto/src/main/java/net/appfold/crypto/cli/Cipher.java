@@ -7,8 +7,6 @@ import javax.validation.constraints.NotNull;
 import java.io.Console;
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.math.BigInteger;
-import java.security.SecureRandom;
 
 import static java.lang.System.*;
 import static java.util.Arrays.asList;
@@ -31,18 +29,18 @@ public class Cipher {
 
     public Cipher() {
         options //@fmt:off
-            .addOption(builder("k")
-                           .longOpt("key")
-                           .hasArg().optionalArg(true).argName("master-key")
-                           .desc("the master key to use; " +
-                                 "if no argument is provided (recommended!), prompt the user")
+            .addOption(builder("m")
+                           .longOpt("master")
+                           .hasArg().optionalArg(true).argName("master-password")
+                           .desc("the master password to use; " +
+                                 "if no argument is provided (recommended), prompt the user")
                            .build())
             .addOptionGroup(new OptionGroup()
                                 .addOption(builder("p")
                                                .longOpt("plain")
                                                .hasArg().optionalArg(true).argName("plaintext")
                                                .desc("the information to encrypt (i.e. assume encrypt mode); " +
-                                                     "if no argument is provided (recommended!), prompt the user")
+                                                     "if no argument is provided (recommended), prompt the user")
                                                .build())
                                 .addOption(builder("c")
                                                .longOpt("cipher")
@@ -59,7 +57,7 @@ public class Cipher {
                            .build())
             .addOption(builder("e")
                            .longOpt("echo")
-                           .desc("echo the user input when prompting for master key or plaintext")
+                           .desc("echo the user input when prompting for master password or plaintext")
                            .build())
             .addOption(builder("h")
                            .longOpt("help")
@@ -73,11 +71,11 @@ public class Cipher {
         final HelpFormatter fmt = new HelpFormatter();
         fmt.setOptionComparator(null); // keep definition order for options
         fmt.setSyntaxPrefix("Usage: ");
-        fmt.printHelp(new PrintWriter(usage), 72, "java [-options] " + Cipher.class.getName(), nl + //@fmt:off
-                      "Encrypts plaintext (-p) or decrypts ciphertext (-c) employing a"      + nl +
-                      "user-provided master key (-k). If neither -p nor -c are provided"     + nl +
-                      "-p (i.e. encrypt mode) is assumed. Uses authenticated encryption"     + nl +
-                      "if additional data (-a) is specified."                                + nl + nl, //@fmt:on
+        fmt.printHelp(new PrintWriter(usage), 78, "java [-java-opts] " + Cipher.class.getName(), nl + //@fmt:off
+                      "Encrypts plaintext (-p) or decrypts ciphertext (-c) employing a"        + nl +
+                      "user-provided master password (-m). If neither -p nor -c are provided"  + nl +
+                      "-p (i.e. encrypt mode) is assumed. Uses authenticated encryption when"  + nl +
+                      "additional data (-a) is specified."                                     + nl + nl, //@fmt:on
                       options, DEFAULT_LEFT_PAD, DEFAULT_DESC_PAD, null, true);
 
         this.usage = usage.toString();
@@ -114,7 +112,7 @@ public class Cipher {
 
         validate(commandLine); // multiple arguments, etc.
 
-        char[] key = getKey(commandLine);
+        char[] key = createKey(commandLine);
 
         return new char[]{};
     }
@@ -124,7 +122,7 @@ public class Cipher {
             return;
         }
 
-        for (String opt : asList("k", "p", "c")) {
+        for (String opt : asList("m", "p", "c")) {
             final String[] val = commandLine.getOptionValues(opt);
             if (val != null && val.length > 1) {
                 throw new ParseException("The option '" + opt + "' can only be specified once");
@@ -132,20 +130,14 @@ public class Cipher {
         }
     }
 
-    private char[] getKey(CommandLine commandLine) {
+    private char[] createKey(CommandLine commandLine) {
         if (commandLine == null) {
             return null;
         }
 
-        if (!commandLine.hasOption('k')) {
-
-            final byte[] key = new byte[128];
-            new SecureRandom().nextBytes(key);
-            System.out.println(new BigInteger(1, key).toString(16));
-
-            System.out.println("Generate random key");
+        if (!commandLine.hasOption('m')) {
         } else {
-            if (commandLine.getOptionValue('k') == null) {
+            if (commandLine.getOptionValue('m') == null) {
                 System.out.println("Read key from console");
             } else {
                 System.out.println("Get char array");
