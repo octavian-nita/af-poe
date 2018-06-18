@@ -303,13 +303,13 @@ private String env(String name, def defaultOrProvider = '') {
     // Maven / Gradle project passed in bindings?
     final project = binding.variables.project
 
-    return ((properties[name] ?: //@fmt:off
-             project?.properties?.get(name)                   ?:
-             project?.hasProperty(name)?.getProperty(project) ?:
-             binding.variables[name]                          ?:
-             getenv(name)                                     ?://@fmt:on
-             (defaultOrProvider instanceof Closure ? defaultOrProvider.call() : defaultOrProvider) ?:
-             '') as String).trim()
+    ((System.properties?."$name" ?: //@fmt:off
+      project?.properties?.get(name)                   ?:
+      project?.hasProperty(name)?.getProperty(project) ?:
+      System.getenv(name)                              ?:
+      binding.variables?."$name"                       ?: //@fmt:on
+      (defaultOrProvider instanceof Closure ? defaultOrProvider.call() : defaultOrProvider) ?:
+      '') as String).trim()
 }
 
 private handle(Exception exception, def messageOrProvider = '') {
